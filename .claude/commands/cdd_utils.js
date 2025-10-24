@@ -44,12 +44,9 @@ class CDDUtils {
     };
 
     const lines = content.split('\n');
-    let currentSection = null;
+    let context = 'root'; // root, project, modules, dependencies, paths, plugins
     let currentModule = null;
-    let braceLevel = 0;
-    let inProjectBlock = false;
 
-    // Improved state machine parser with proper brace tracking
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
@@ -59,29 +56,37 @@ class CDDUtils {
         continue;
       }
 
-      // Track brace level
-      if (trimmed === '{') {
-        braceLevel++;
+      // Track context changes
+      if (trimmed === 'project {') {
+        context = 'project';
+        continue;
+      } else if (trimmed === 'modules {') {
+        context = 'modules';
+        continue;
+      } else if (trimmed === 'dependencies {') {
+        context = 'dependencies';
+        continue;
+      } else if (trimmed === 'paths {') {
+        context = 'paths';
+        continue;
+      } else if (trimmed === 'plugins {') {
+        context = 'plugins';
         continue;
       } else if (trimmed === '}') {
-        braceLevel--;
-        if (braceLevel === 0) {
-          inProjectBlock = false;
-          currentSection = null;
-          currentModule = null;
+        // Exit current context
+        if (currentModule) {
+          currentModule = null; // Exit module
+        } else if (context === 'modules' || context === 'dependencies' || context === 'paths' || context === 'plugins') {
+          context = 'project'; // Exit section back to project
+        } else if (context === 'project') {
+          context = 'root'; // Exit project
         }
         continue;
       }
 
-      // Parse project block start
-      if (trimmed.startsWith('project {')) {
-        inProjectBlock = true;
-        braceLevel = 1;
-        continue;
-      }
-
-      // Parse top-level project properties (only when inside project block and at level 1)
-      if (inProjectBlock && braceLevel === 1 && !currentSection && !currentModule) {
+      // Parse based on context
+      if (context === 'project') {
+        // Parse top-level project properties
         if (trimmed.startsWith('name:')) {
           config.name = trimmed.split(':')[1].trim().replace(/"/g, '');
         } else if (trimmed.startsWith('version:')) {
@@ -91,43 +96,40 @@ class CDDUtils {
         } else if (trimmed.startsWith('framework:')) {
           config.framework = trimmed.split(':')[1].trim().replace(/"/g, '');
         }
-        // Parse section starts (handle both "modules" and "modules {")
-        else if (trimmed.startsWith('modules')) {
-          currentSection = 'modules';
-        } else if (trimmed.startsWith('dependencies')) {
-          currentSection = 'dependencies';
-        } else if (trimmed.startsWith('paths')) {
-          currentSection = 'paths';
-        } else if (trimmed.startsWith('plugins')) {
-          currentSection = 'plugins';
+      } else if (context === 'modules' && !currentModule) {
+        // Parse module definitions (only when not inside a module)
+        if (trimmed.includes(' {')) {
+          const moduleName = trimmed.split(' {')[0].trim();
+          currentModule = moduleName;
+          config.modules[moduleName] = {};
         }
-      }
-      // Parse module definitions within modules section
-      else if (currentSection === 'modules' && trimmed.includes(' {')) {
-        const moduleName = trimmed.split(' {')[0].trim();
-        currentModule = moduleName;
-        config.modules[moduleName] = {};
-      }
-      // Parse module properties
-      else if (currentModule && trimmed.includes(':')) {
-        const [key, value] = trimmed.split(':').map(s => s.trim());
-        config.modules[currentModule][key] = value.replace(/"/g, '');
-      }
-      // Parse dependencies
-      else if (currentSection === 'dependencies' && trimmed.includes(':')) {
-        const [key, value] = trimmed.split(':').map(s => s.trim());
-        const modules = value.replace(/[\[\]]/g, '').split(',').map(m => m.trim()).filter(m => m);
-        config.dependencies[key] = modules;
-      }
-      // Parse paths
-      else if (currentSection === 'paths' && trimmed.includes(':')) {
-        const [key, value] = trimmed.split(':').map(s => s.trim());
-        config.paths[key] = value.replace(/"/g, '');
-      }
-      // Parse plugins
-      else if (currentSection === 'plugins' && trimmed.includes(':')) {
-        const [key, value] = trimmed.split(':').map(s => s.trim());
-        config.plugins[key] = value === 'true' ? true : value === 'false' ? false : value.replace(/"/g, '');
+      } else if (currentModule) {
+        // Parse module properties (when inside a module)
+        if (trimmed.includes(':')) {
+          const [key, value] = trimmed.split(':').map(s => s.trim());
+          config.modules[currentModule][key] = value.replace(/"/g, '');
+          // Debug output
+          // console.log(`Set ${currentModule}.${key} = ${config.modules[currentModule][key]}`);
+        }
+      } else if (context === 'dependencies') {
+        // Parse dependencies
+        if (trimmed.includes(':')) {
+          const [key, value] = trimmed.split(':').map(s => s.trim());
+          const modules = value.replace(/[\[\]]/g, '').split(',').map(m => m.trim()).filter(m => m);
+          config.dependencies[key] = modules;
+        }
+      } else if (context === 'paths') {
+        // Parse paths
+        if (trimmed.includes(':')) {
+          const [key, value] = trimmed.split(':').map(s => s.trim());
+          config.paths[key] = value.replace(/"/g, '');
+        }
+      } else if (context === 'plugins') {
+        // Parse plugins
+        if (trimmed.includes(':')) {
+          const [key, value] = trimmed.split(':').map(s => s.trim());
+          config.plugins[key] = value === 'true' ? true : value === 'false' ? false : value.replace(/"/g, '');
+        }
       }
     }
 

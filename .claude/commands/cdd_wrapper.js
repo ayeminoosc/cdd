@@ -48,7 +48,15 @@ if (command === 'build') {
 
       // Save context for Claude
       const fs = require('fs');
-      fs.writeFileSync('build/implementation_context.json', JSON.stringify(context, null, 2));
+      const path = require('path');
+
+      // Ensure build directory exists
+      const buildDir = 'build';
+      if (!fs.existsSync(buildDir)) {
+        fs.mkdirSync(buildDir, { recursive: true });
+      }
+
+      fs.writeFileSync(path.join(buildDir, 'implementation_context.json'), JSON.stringify(context, null, 2));
 
       console.log(`✅ Implementation context prepared for ${contractsToImplement.length} contract(s)`);
       console.log('📄 Context saved to: build/implementation_context.json');

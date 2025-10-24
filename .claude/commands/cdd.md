@@ -14,7 +14,8 @@ Execute CDD commands and orchestrate contract implementation workflow.
 node .claude/commands/cdd_wrapper.js $ARGUMENTS
 
 # If build command created implementation context, present it to Claude
-if [ "$1" = "build" ] && [ -f "build/implementation_context.json" ]; then
+if [ "$1" = "build" ]; then
+  if [ -f "build/implementation_context.json" ]; then
   echo ""
   echo "🤖 Implementation Instructions for Claude:"
   echo "=========================================="
@@ -33,7 +34,6 @@ if [ "$1" = "build" ] && [ -f "build/implementation_context.json" ]; then
     console.log('## Project Context');
     console.log(\`- **Project**: \${context.project.name}\`);
     console.log(\`- **Language**: \${context.project.language}\`);
-    console.log(\`- **Framework**: \${context.project.framework}\`);
     console.log(\`- **Output**: \${context.project.paths.output}\`);
     console.log('');
 
@@ -77,33 +77,7 @@ if [ "$1" = "build" ] && [ -f "build/implementation_context.json" ]; then
       }
     });
 
-    console.log('## Implementation Requirements');
-    console.log('');
-    console.log('**IMPORTANT**: Create the actual implementation files immediately. Do not provide plans or discussions.');
-    console.log('');
-    console.log('### 1. Code Quality');
-    console.log(\`- Write clean, idiomatic \${context.project.language} code\`);
-    console.log(\`- Follow \${context.project.framework} best practices\`);
-    console.log('- Include proper error handling and validation');
-    console.log('- Add comprehensive TypeScript annotations');
-    console.log('');
-    console.log('### 2. Data Implementation');
-    console.log('- Create TypeScript interfaces/classes for all data');
-    console.log('- Include proper type definitions and field validations');
-    console.log('- Add relationships and inheritance where applicable');
-    console.log('');
-    console.log('### 3. Component Implementation');
-    console.log('- Implement all component methods with full business logic');
-    console.log('- Include proper error handling and edge cases');
-    console.log('- Add input validation and sanitization');
-    console.log('');
-    console.log('### 4. Aspect Implementation');
-    console.log('- Implement cross-cutting concerns (logging, caching, etc.)');
-    console.log('- Ensure aspects are properly integrated');
-    console.log('');
-    console.log('## File Structure');
-
-    // Group contracts by module and show module-specific output paths
+    // Group contracts by module and show module-specific implementation requirements
     const contractsByModule = {};
     context.changedContracts.forEach(c => {
       const moduleKey = c.contract.package;
@@ -117,36 +91,61 @@ if [ "$1" = "build" ] && [ -f "build/implementation_context.json" ]; then
       const moduleConfig = context.project.modules[moduleKey];
       if (moduleConfig) {
         console.log(\`### Module: \${moduleConfig.name} (\${moduleKey})\`);
+        console.log(\`**Language**: \${moduleConfig.language}\`);
         console.log(\`**Output Directory**: \${moduleConfig.output}/\`);
         console.log('');
 
+        // Read and display module-specific implementation instructions
+        const moduleCddPath = \`\${moduleKey}/cdd.md\`;
+        if (fs.existsSync(moduleCddPath)) {
+          const moduleInstructions = fs.readFileSync(moduleCddPath, 'utf-8');
+          // Extract content between --- markers and after
+          const contentMatch = moduleInstructions.match(/---[\\s\\S]*?---([\\s\\S]*)/);
+          if (contentMatch) {
+            console.log(contentMatch[1].trim());
+          } else {
+            console.log(moduleInstructions);
+          }
+        } else {
+          console.log(\`⚠️  Module-specific instructions not found at \${moduleCddPath}\`);
+        }
+
+        console.log('');
+        console.log(\`**Files to implement for \${moduleKey}:\`);
         contractsByModule[moduleKey].forEach(c => {
-          console.log(\`**Contracts for \${c.contract.name}:**\`);
-
           if (c.parsed.data && c.parsed.data.length > 0) {
-            console.log(\`- Data: \${c.parsed.data.map(d => \`\${moduleConfig.output}/\${d.name}.ts\`).join(', ')}\`);
+            console.log(\`- Data: \${c.parsed.data.map(d => \`\${moduleConfig.output}/\${d.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
           }
-
           if (c.parsed.components && c.parsed.components.length > 0) {
-            console.log(\`- Components: \${c.parsed.components.map(comp => \`\${moduleConfig.output}/\${comp.name}.ts\`).join(', ')}\`);
+            console.log(\`- Components: \${c.parsed.components.map(comp => \`\${moduleConfig.output}/\${comp.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
           }
-
           if (c.parsed.aspects && c.parsed.aspects.length > 0) {
-            console.log(\`- Aspects: \${c.parsed.aspects.map(a => \`\${moduleConfig.output}/\${a.name}.aspect.ts\`).join(', ')}\`);
+            console.log(\`- Aspects: \${c.parsed.aspects.map(a => \`\${moduleConfig.output}/\${a.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
           }
-          console.log('');
         });
+        console.log('');
+        console.log('---');
       }
     });
     console.log('');
     console.log('## Final Instruction');
-    console.log('Create all implementation files now. Start with data, then components, then aspects.');
+    console.log('Implement each module following its specific instructions above.');
     console.log('After implementation, run: `/cdd hash` to update hashes.');
 
   } catch (error) {
     console.error('Error:', error.message);
   }
   "
+
+  else
+    echo ""
+    echo "✅ All contracts are up to date!"
+    echo "============================="
+    echo ""
+    echo "No implementation needed. All contracts are already implemented and their hashes match."
+    echo ""
+    echo "If you've made changes to contracts, run '/cdd build' again to see what needs to be implemented."
+  fi
 
   echo ""
   echo "After implementing the contracts, run: /cdd hash"

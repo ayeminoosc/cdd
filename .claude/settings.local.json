@@ -5,7 +5,12 @@
       "Bash(node:*)",
       "Read(//c/data/projects/ACFSoft_Projects/**)",
       "Read(//c/**)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(if [ -f \"build/implementation_context.json\" ])",
+      "Bash(then)",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash(else)",
+      "Bash(fi:*)"
     ],
     "deny": [],
     "ask": []
