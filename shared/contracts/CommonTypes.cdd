@@ -1,0 +1,44 @@
+// Shared Core Types Contract
+
+data BaseEntity {
+  description: "Base entity with common fields"
+  id: string
+  createdAt: datetime
+  updatedAt: datetime
+  version: number
+}
+
+data ValidationResult {
+  description: "Validation result entity"
+  isValid: boolean
+  errors: ValidationError[]
+  warnings: ValidationWarning[]
+}
+
+data ValidationError {
+  description: "Validation error details"
+  field: string
+  message: string
+  code: string
+}
+
+data ValidationWarning {
+  description: "Validation warning details"
+  field: string
+  message: string
+  code: string
+}
+
+aspect BaseValidation {
+  description: "Validates base entity properties"
+  before "*" {
+    description: "Validate all base entity fields"
+  }
+}
+
+aspect AuditTrail {
+  description: "Tracks changes to entities"
+  after "*" {
+    description: "Log all changes with metadata"
+  }
+}

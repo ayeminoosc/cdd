@@ -1,0 +1,62 @@
+// Frontend UI Components Contract
+
+component UIComponentService {
+  description: "Manages UI component creation and state"
+
+  func createComponent(component: UIComponent): UIComponent {
+    description: "Create a new UI component with initial state"
+  }
+
+  func updateComponent(componentId: string, component: UIComponent): UIComponent {
+    description: "Update an existing UI component"
+  }
+
+  func getComponent(componentId: string): UIComponent? {
+    description: "Get a specific UI component by ID"
+  }
+
+  func listComponents(): UIComponent[] {
+    description: "List all UI components"
+  }
+}
+
+data UIComponent {
+  description: "UI Component entity"
+  id: string
+  name: string
+  type: ComponentType
+  props: object
+  state: ComponentState
+  package: string
+  createdAt: datetime
+  updatedAt: datetime
+}
+
+data ComponentType {
+  description: "Component type enumeration"
+  FUNCTIONAL: string
+  CLASS: string
+  HOOK: string
+}
+
+data ComponentState {
+  description: "Component state management"
+  visible: boolean
+  disabled: boolean
+  loading: boolean
+  error: string?
+}
+
+aspect Validation {
+  description: "Validates UI component props and state"
+  before "component.*" {
+    description: "Validate component properties"
+  }
+}
+
+aspect StateManagement {
+  description: "Handles component state changes"
+  around "component.*" {
+    description: "Track state changes and update UI"
+  }
+}

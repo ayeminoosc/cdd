@@ -1,0 +1,49 @@
+project {
+  name: "CDDExample"
+  version: "1.0.0"
+  language: "typescript"
+  framework: "express"
+
+  modules {
+    frontend {
+      name: "Frontend App"
+      language: "typescript"
+      framework: "react"
+      contracts: "frontend/contracts"
+      output: "frontend/generated"
+    }
+
+    backend {
+      name: "Backend App"
+      language: "java"
+      framework: "spring"
+      contracts: "backend/contracts"
+      output: "backend/generated"
+    }
+
+    shared {
+      name: "Shared Core"
+      language: "typescript"
+      framework: "node"
+      contracts: "shared/contracts"
+      output: "shared/generated"
+    }
+  }
+
+  dependencies {
+    frontend: [shared]
+    backend: [shared]
+  }
+
+  paths {
+    contracts: "contracts"
+    output: "generated"
+    source: "src"
+  }
+
+  plugins {
+    validation: true
+    testing: true
+    documentation: true
+  }
+}
