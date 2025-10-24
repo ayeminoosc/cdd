@@ -77,56 +77,60 @@ if [ "$1" = "build" ]; then
       }
     });
 
-    // Group contracts by module and show module-specific implementation requirements
-    const contractsByModule = {};
-    context.changedContracts.forEach(c => {
-      const moduleKey = c.contract.package;
-      if (!contractsByModule[moduleKey]) {
-        contractsByModule[moduleKey] = [];
-      }
-      contractsByModule[moduleKey].push(c);
-    });
+    // Display module-specific implementation requirements from new organized structure
+    if (context.modules) {
+      Object.keys(context.modules).forEach(moduleKey => {
+        const module = context.modules[moduleKey];
+        if (module.contracts && module.contracts.length > 0) {
+          console.log(\`### Module: \${module.name} (\${module.package})\`);
+          console.log(\`**Language**: \${module.language}\`);
+          console.log(\`**Output Directory**: \${module.output}/\`);
+          console.log('');
 
-    Object.keys(contractsByModule).forEach(moduleKey => {
-      const moduleConfig = context.project.modules[moduleKey];
-      if (moduleConfig) {
-        console.log(\`### Module: \${moduleConfig.name} (\${moduleKey})\`);
-        console.log(\`**Language**: \${moduleConfig.language}\`);
-        console.log(\`**Output Directory**: \${moduleConfig.output}/\`);
-        console.log('');
-
-        // Read and display module-specific implementation instructions
-        const moduleCddPath = \`\${moduleKey}/cdd.md\`;
-        if (fs.existsSync(moduleCddPath)) {
-          const moduleInstructions = fs.readFileSync(moduleCddPath, 'utf-8');
-          // Extract content between --- markers and after
-          const contentMatch = moduleInstructions.match(/---[\\s\\S]*?---([\\s\\S]*)/);
-          if (contentMatch) {
-            console.log(contentMatch[1].trim());
+          // Display module-specific implementation instructions from JSON
+          if (module.instructions) {
+            console.log(module.instructions);
           } else {
-            console.log(moduleInstructions);
+            console.log(\`⚠️  No implementation instructions found for module \${moduleKey}\`);
           }
-        } else {
-          console.log(\`⚠️  Module-specific instructions not found at \${moduleCddPath}\`);
-        }
 
-        console.log('');
-        console.log(\`**Files to implement for \${moduleKey}:\`);
-        contractsByModule[moduleKey].forEach(c => {
-          if (c.parsed.data && c.parsed.data.length > 0) {
-            console.log(\`- Data: \${c.parsed.data.map(d => \`\${moduleConfig.output}/\${d.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
-          }
-          if (c.parsed.components && c.parsed.components.length > 0) {
-            console.log(\`- Components: \${c.parsed.components.map(comp => \`\${moduleConfig.output}/\${comp.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
-          }
-          if (c.parsed.aspects && c.parsed.aspects.length > 0) {
-            console.log(\`- Aspects: \${c.parsed.aspects.map(a => \`\${moduleConfig.output}/\${a.name}.\${moduleConfig.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
-          }
-        });
-        console.log('');
-        console.log('---');
-      }
-    });
+          console.log('');
+          console.log(\`**Contracts to implement for \${moduleKey}:\`);
+
+          module.contracts.forEach(c => {
+            console.log(\`- **\${c.name}** (\${c.changeType})\`);
+            if (c.parsed.data && c.parsed.data.length > 0) {
+              console.log(\`  - Data: \${c.parsed.data.map(d => d.name).join(', ')}\`);
+            }
+            if (c.parsed.components && c.parsed.components.length > 0) {
+              console.log(\`  - Components: \${c.parsed.components.map(comp => comp.name).join(', ')}\`);
+            }
+            if (c.parsed.aspects && c.parsed.aspects.length > 0) {
+              console.log(\`  - Aspects: \${c.parsed.aspects.map(a => a.name).join(', ')}\`);
+            }
+          });
+
+          console.log('');
+          console.log(\`**Files to implement for \${moduleKey}:\`);
+          module.contracts.forEach(c => {
+            if (c.parsed.data && c.parsed.data.length > 0) {
+              console.log(\`- Data: \${c.parsed.data.map(d => \`\${module.output}/\${d.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
+            }
+            if (c.parsed.components && c.parsed.components.length > 0) {
+              console.log(\`- Components: \${c.parsed.components.map(comp => \`\${module.output}/\${comp.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
+            }
+            if (c.parsed.aspects && c.parsed.aspects.length > 0) {
+              console.log(\`- Aspects: \${c.parsed.aspects.map(a => \`\${module.output}/\${a.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
+            }
+          });
+          console.log('');
+          console.log('---');
+        }
+      });
+    } else {
+      // Fallback to old structure if modules not available
+      console.log('⚠️  Module structure not available in context');
+    }
     console.log('');
     console.log('## Final Instruction');
     console.log('Implement each module following its specific instructions above.');

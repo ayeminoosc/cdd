@@ -145,7 +145,7 @@ class CDDUtils {
     const contracts = [];
 
     // Helper function to recursively find .cdd files
-    const findContracts = (dir, moduleName) => {
+    const findContracts = (dir, moduleName, baseDir) => {
       if (!fs.existsSync(dir)) {
         return;
       }
@@ -158,13 +158,17 @@ class CDDUtils {
 
         if (stat.isDirectory()) {
           // Recurse into subdirectories
-          findContracts(itemPath, moduleName);
+          findContracts(itemPath, moduleName, baseDir);
         } else if (item.endsWith('.cdd')) {
           // Found a contract file
+          // Calculate relative path from contracts directory to preserve package structure
+          const relativePath = path.relative(baseDir, itemPath);
+
           contracts.push({
             name: item,
             package: moduleName,
-            path: itemPath,
+            path: itemPath, // Keep the full absolute path
+            relativePath: relativePath, // Add relative path for reference
             content: fs.readFileSync(itemPath, 'utf-8')
           });
         }
@@ -176,14 +180,14 @@ class CDDUtils {
       for (const moduleName in this.projectConfig.modules) {
         const module = this.projectConfig.modules[moduleName];
         const moduleContractsDir = path.join(this.projectRoot, module.contracts);
-        findContracts(moduleContractsDir, moduleName);
+        findContracts(moduleContractsDir, moduleName, moduleContractsDir);
       }
     }
 
     // Also scan global contracts directory if it exists
     if (this.projectConfig.paths && this.projectConfig.paths.contracts) {
       const globalContractsDir = path.join(this.projectRoot, this.projectConfig.paths.contracts);
-      findContracts(globalContractsDir, 'default');
+      findContracts(globalContractsDir, 'default', globalContractsDir);
     }
 
     return contracts;

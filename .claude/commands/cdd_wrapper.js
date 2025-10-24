@@ -4,7 +4,93 @@ const cdd = new CDDUtils();
 const command = process.argv[2];
 const moduleTarget = process.argv[3]; // e.g., 'app.frontend'
 
-if (command === 'build') {
+if (command === 'clean') {
+  console.log('🧹 Cleaning build artifacts...');
+
+  const fs = require('fs');
+  const path = require('path');
+
+  // Clean build directory
+  const buildDir = 'build';
+  if (fs.existsSync(buildDir)) {
+    fs.rmSync(buildDir, { recursive: true, force: true });
+    console.log(`✅ Removed ${buildDir}/ directory`);
+  }
+
+  // Clean generated directories for all modules
+  const cdd = new CDDUtils();
+  cdd.loadProjectConfig();
+
+  if (cdd.projectConfig.modules) {
+    for (const [moduleKey, moduleConfig] of Object.entries(cdd.projectConfig.modules)) {
+      const generatedDir = moduleConfig.output;
+      if (fs.existsSync(generatedDir)) {
+        fs.rmSync(generatedDir, { recursive: true, force: true });
+        console.log(`✅ Removed ${generatedDir}/ directory`);
+      }
+    }
+  }
+
+  // Clean global generated directory if it exists
+  if (cdd.projectConfig.paths && cdd.projectConfig.paths.output) {
+    const globalGeneratedDir = cdd.projectConfig.paths.output;
+    if (fs.existsSync(globalGeneratedDir)) {
+      fs.rmSync(globalGeneratedDir, { recursive: true, force: true });
+      console.log(`✅ Removed ${globalGeneratedDir}/ directory`);
+    }
+  }
+
+  console.log('🎉 Clean completed!');
+
+} else if (command === 'clean-build') {
+  console.log('🧹 Cleaning and then building...');
+
+  // First clean (reuse clean logic)
+  const fs = require('fs');
+  const path = require('path');
+
+  // Clean build directory
+  const buildDir = 'build';
+  if (fs.existsSync(buildDir)) {
+    fs.rmSync(buildDir, { recursive: true, force: true });
+  }
+
+  // Clean generated directories
+  cdd.loadProjectConfig();
+
+  if (cdd.projectConfig.modules) {
+    for (const [moduleKey, moduleConfig] of Object.entries(cdd.projectConfig.modules)) {
+      const generatedDir = moduleConfig.output;
+      if (fs.existsSync(generatedDir)) {
+        fs.rmSync(generatedDir, { recursive: true, force: true });
+      }
+    }
+  }
+
+  // Clean global generated directory if it exists
+  if (cdd.projectConfig.paths && cdd.projectConfig.paths.output) {
+    const globalGeneratedDir = cdd.projectConfig.paths.output;
+    if (fs.existsSync(globalGeneratedDir)) {
+      fs.rmSync(globalGeneratedDir, { recursive: true, force: true });
+    }
+  }
+
+  console.log('✅ Clean completed, starting build...');
+
+  // Remove hashes to force rebuild
+  const hashFile = path.join(cdd.projectRoot, '.cdd', 'hashes.csv');
+  if (fs.existsSync(hashFile)) {
+    fs.unlinkSync(hashFile);
+  }
+
+  // Then continue with normal build logic
+  if (moduleTarget) {
+      console.log(`🔨 Analyzing contracts for module: ${moduleTarget}...`);
+    } else {
+      console.log('🔨 Analyzing contracts for all modules...');
+    }
+
+} else if (command === 'build') {
   if (moduleTarget) {
       console.log(`🔨 Analyzing contracts for module: ${moduleTarget}...`);
     } else {
@@ -29,17 +115,89 @@ if (command === 'build') {
       const context = cdd.getProjectContext();
       const contractsToImplement = [...changes.added, ...changes.modified];
 
+      // Group contracts by module and include module instructions
+      const modules = {};
+      const fs = require('fs');
+      const path = require('path');
+
+      // Initialize modules from project config
+      for (const [moduleKey, moduleConfig] of Object.entries(context.project.modules || {})) {
+        // Read module-specific cdd.md instructions
+        let moduleInstructions = '';
+        const moduleCddPath = path.join(process.cwd(), moduleKey, 'cdd.md');
+        if (fs.existsSync(moduleCddPath)) {
+          moduleInstructions = fs.readFileSync(moduleCddPath, 'utf-8');
+          // Extract content after frontmatter
+          const contentMatch = moduleInstructions.match(/---[\s\S]*?---([\s\S]*)/);
+          if (contentMatch) {
+            moduleInstructions = contentMatch[1].trim();
+          }
+        }
+
+        modules[moduleKey] = {
+          name: moduleConfig.name || moduleKey,
+          package: moduleKey,
+          language: moduleConfig.language,
+          output: moduleConfig.output,
+          instructions: moduleInstructions,
+          contracts: []
+        };
+      }
+
+      // Add contracts to their respective modules
+      contractsToImplement.forEach(c => {
+        const moduleKey = c.contract.package;
+        if (modules[moduleKey]) {
+          const parsed = cdd.parseContract(c.contract.content);
+
+          // Extract package from relative path
+          let extractedPackage = null;
+          if (c.contract.relativePath) {
+            const pathParts = c.contract.relativePath.split(path.sep);
+            // Remove the contract filename from path
+            const dirParts = pathParts.slice(0, -1);
+            if (dirParts.length > 0) {
+              extractedPackage = dirParts.join('.');
+            }
+          }
+
+          modules[moduleKey].contracts.push({
+            name: c.contract.name,
+            content: c.contract.content,
+            path: c.contract.path,
+            relativePath: c.contract.relativePath,
+            extractedPackage: extractedPackage, // Add extracted package info
+            parsed: parsed,
+            status: 'needs_implementation',
+            changeType: changes.added.includes(c) ? 'new' : 'modified'
+          });
+        }
+      });
+
+      // Update context with organized module structure
+      context.modules = modules;
+
+      // Remove duplicate contracts array - use module organization instead
+      delete context.contracts;
+
+      // Keep changedContracts for backward compatibility but only include metadata
       context.changedContracts = contractsToImplement.map(c => ({
-        ...c,
+        contract: {
+          name: c.contract.name,
+          package: c.contract.package,
+          path: c.contract.path,
+          relativePath: c.contract.relativePath
+        },
         status: 'needs_implementation',
         changeType: changes.added.includes(c) ? 'new' : 'modified'
       }));
 
+      // Keep allContracts for backward compatibility but only include metadata
       context.allContracts = changes.all.map(c => {
         const parsed = cdd.parseContract(c.content);
         return {
           name: c.name,
-          content: c.content,
+          package: c.package,
           ...parsed,
           entities: parsed.data, // backward compatibility
           services: parsed.components // backward compatibility
@@ -47,8 +205,6 @@ if (command === 'build') {
       });
 
       // Save context for Claude
-      const fs = require('fs');
-      const path = require('path');
 
       // Ensure build directory exists
       const buildDir = 'build';
@@ -112,8 +268,10 @@ if (command === 'build') {
     process.exit(1);
   }
 } else {
-  console.log('Usage: /cdd [build|hash|status]');
-  console.log('  build  - Analyze contracts and prepare implementation');
-  console.log('  hash   - Generate hashes for implemented contracts');
-  console.log('  status - Show contract status report');
+  console.log('Usage: /cdd [build|hash|status|clean|clean-build]');
+  console.log('  build       - Analyze contracts and prepare implementation');
+  console.log('  hash        - Generate hashes for implemented contracts');
+  console.log('  status      - Show contract status report');
+  console.log('  clean       - Clean build and generated directories');
+  console.log('  clean-build - Clean and then rebuild all contracts');
 }

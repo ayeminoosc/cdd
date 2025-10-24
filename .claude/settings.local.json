@@ -10,7 +10,9 @@
       "Bash(then)",
       "Bash(__NEW_LINE__ echo \"\")",
       "Bash(else)",
-      "Bash(fi:*)"
+      "Bash(fi:*)",
+      "Bash(__NEW_LINE__ else)",
+      "Bash(then echo \"\")"
     ],
     "deny": [],
     "ask": []
