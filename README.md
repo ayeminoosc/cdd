@@ -45,9 +45,11 @@ Contract-Driven Development is a framework that puts human architects back in co
 
 ### Key Features
 
-- ✅ **Agent Agnostic**: Compatible with Claude Code, GitHub Copilot, Cursor, and other AI agents
+- ✅ **Universal Compatibility**: Works with any AI model configured in your environment (local, open-source, commercial)
+- ✅ **Cost-Effective**: No expensive high-reasoning AI required - works with capable affordable models
 - ✅ **Language Agnostic**: Works with TypeScript, Java, JavaScript, and any programming language
 - ✅ **Framework Agnostic**: Compatible with React, Spring Boot, Express, Node.js, and any framework
+- ✅ **Local First**: Run models locally for complete privacy and cost control
 - ✅ **Package Structure Preservation**: Maintain proper package hierarchies
 - ✅ **Module-Specific Instructions**: Different implementation guidelines per module
 - ✅ **Hash-Based Change Detection**: Only regenerate what actually changed
@@ -73,17 +75,28 @@ cp -r .claude /path/to/your/project/
 
 That's it! No dependencies, no npm install required.
 
-### Future Agent Support
+### Agent Compatibility
 
-CDD is designed to be **agent-agnostic** and will support major AI development tools:
+CDD works with **any AI model** configured in your development environment:
 
-- ✅ **Claude Code** - Currently available
-- 🚧 **GitHub Copilot** - Coming soon
-- 🚧 **Cursor** - Coming soon
-- 🚧 **OpenAI Codex** - Coming soon
-- 🚧 **Other AI Agents** - Framework for expansion
+- ✅ **Claude Code** - Native support
+- ✅ **Local LLMs** - Works immediately when configured in Claude Code (Ollama, LM Studio, etc.)
+- ✅ **Open Source Models** - Llama, Mistral, and other capable models
+- ✅ **Commercial Models** - Any model available through your AI platform
+- 🚧 **Direct Integrations** - GitHub Copilot, Cursor, OpenAI Codex (coming soon)
 
-The contract-based approach ensures consistent behavior across all supported AI agents.
+### Cost-Effective Development
+
+**No Expensive AI Required**: CDD works with any capable language model - you don't need premium, high-reasoning models with steep price tags:
+
+- **Local LLMs**: Run models locally for complete privacy and cost control
+- **Open Source Models**: Use capable open models that handle structured code generation
+- **Smaller Commercial Models**: Cost-effective alternatives to flagship models
+- **On-Premise Deployment**: Keep everything within your infrastructure
+
+**Why CDD Works with Any Model**: The contract-based approach provides structured, specific instructions that don't require advanced reasoning. When you give an LLM precise contracts and clear implementation guidelines, even modest models can generate high-quality, consistent code.
+
+CDD is a **Claude Code tool** that leverages whatever AI model you have configured, ensuring immediate compatibility with local and open source models.
 
 ### Setting Up Your Project
 
@@ -455,7 +468,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### Upcoming Features
 
-- [ ] **Multi-Agent Support**: GitHub Copilot, Cursor, OpenAI Codex integration
+- [ ] **Direct Agent Integrations**: Native GitHub Copilot, Cursor, OpenAI Codex support
 - [ ] **IDE Plugins**: VS Code and IntelliJ integration
 - [ ] **Visual Contract Editor**: GUI for creating contracts
 - [ ] **Contract Validation**: Automated validation and testing
