@@ -204,64 +204,109 @@ class CDDUtils {
     const lines = content.split('\n');
     let currentSection = null;
     let currentBlock = null;
-    let inMethodBody = false;
     let currentMethod = null;
+    let pendingDoc = null;
+    let inDocComment = false;
+    const docLines = [];
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    const finalizeDoc = () => {
+      if (docLines.length === 0) {
+        return null;
+      }
+      const doc = docLines
+        .map(line => line.replace(/^\s*\*\s?/, '').trim())
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      docLines.length = 0;
+      return doc || null;
+    };
 
-      // Skip comments and empty lines
-      if (trimmed.startsWith('//') || trimmed === '') {
-        continue;
+    const processCode = (code) => {
+      if (code === null || code === undefined) {
+        return;
       }
 
-      // Parse component (service)
-      if (trimmed.startsWith('component ') && trimmed.includes('{')) {
-        currentSection = 'component';
-        const match = trimmed.match(/^component\s+(\w+)\s*\{?/);
+      const trimmed = code.trim();
+
+      if (trimmed === '') {
+        return;
+      }
+
+      if (trimmed.startsWith('//')) {
+        currentMethod = null;
+        return;
+      }
+
+      if (
+        (trimmed.startsWith('component ') || trimmed.startsWith('service ')) &&
+        trimmed.includes('{')
+      ) {
+        const match = trimmed.match(/^(?:component|service)\s+([A-Za-z0-9_]+)/);
         if (match) {
+          currentSection = 'component';
           currentBlock = {
             name: match[1],
             type: 'component',
-            description: '',
+            description: pendingDoc || '',
             methods: []
           };
+        } else {
+          currentSection = null;
+          currentBlock = null;
         }
+        pendingDoc = null;
+        currentMethod = null;
+        return;
       }
-      // Parse data (entity)
-      else if (trimmed.startsWith('data ') && trimmed.includes('{')) {
-        currentSection = 'data';
-        const match = trimmed.match(/^data\s+(\w+)(?:\s+extends\s+(\w+))?\s*\{?/);
+
+      if (trimmed.startsWith('data ') && trimmed.includes('{')) {
+        const match = trimmed.match(/^data\s+([A-Za-z0-9_]+)(?:\s+extends\s+([A-Za-z0-9_<>,.]+))?/);
         if (match) {
+          currentSection = 'data';
           currentBlock = {
             name: match[1],
             extends: match[2] || null,
             type: 'data',
-            description: '',
+            description: pendingDoc || '',
             fields: []
           };
+        } else {
+          currentSection = null;
+          currentBlock = null;
         }
+        pendingDoc = null;
+        currentMethod = null;
+        return;
       }
-      // Parse aspect
-      else if (trimmed.startsWith('aspect ') && trimmed.includes('{')) {
-        currentSection = 'aspect';
-        const match = trimmed.match(/^aspect\s+(\w+)\s*\{?/);
+
+      if (trimmed.startsWith('aspect ') && trimmed.includes('{')) {
+        const match = trimmed.match(/^aspect\s+([A-Za-z0-9_]+)/);
         if (match) {
+          currentSection = 'aspect';
           currentBlock = {
             name: match[1],
             type: 'aspect',
-            description: '',
+            description: pendingDoc || '',
             properties: {}
           };
-        }
-      }
-      // End of block
-      else if (trimmed === '}' && currentBlock) {
-        if (inMethodBody && currentMethod) {
-          currentBlock.methods.push(currentMethod);
-          currentMethod = null;
-          inMethodBody = false;
         } else {
+          currentSection = null;
+          currentBlock = null;
+        }
+        pendingDoc = null;
+        currentMethod = null;
+        return;
+      }
+
+      if (trimmed === '{') {
+        currentMethod = null;
+        pendingDoc = null;
+        return;
+      }
+
+      if (trimmed === '}') {
+        if (currentBlock) {
           if (currentSection === 'data') {
             parsed.data.push(currentBlock);
           } else if (currentSection === 'component') {
@@ -269,67 +314,171 @@ class CDDUtils {
           } else if (currentSection === 'aspect') {
             parsed.aspects.push(currentBlock);
           }
-          currentBlock = null;
-          currentSection = null;
         }
+        currentSection = null;
+        currentBlock = null;
+        currentMethod = null;
+        pendingDoc = null;
+        return;
       }
-      // Parse content inside blocks
-      else if (currentBlock) {
-        // Parse component description
-        if (currentSection === 'component' && trimmed.startsWith('description:')) {
-          currentBlock.description = trimmed.substring(13).trim().replace(/"/g, '');
-        }
-        // Parse data description
-        else if (currentSection === 'data' && trimmed.startsWith('description:')) {
-          currentBlock.description = trimmed.substring(13).trim().replace(/"/g, '');
-        }
-        // Parse aspect description
-        else if (currentSection === 'aspect' && trimmed.startsWith('description:')) {
-          currentBlock.description = trimmed.substring(13).trim().replace(/"/g, '');
-        }
-        // Parse data fields
-        else if (currentSection === 'data' && trimmed.includes(':')) {
-          const [name, type] = trimmed.split(':').map(s => s.trim());
-          if (name && type && name !== 'description') {
-            currentBlock.fields.push({
-              name: name.replace(',', ''),
-              type: type.trim(),
-              hash: this.calculateHash(`${name}:${type}`)
-            });
+
+      if (!currentBlock) {
+        pendingDoc = null;
+        currentMethod = null;
+        return;
+      }
+
+      if (currentMethod && trimmed.startsWith('description:')) {
+        const descValue = trimmed.substring(13).trim().replace(/^['"]|['"]$/g, '');
+        const combined = pendingDoc ? `${pendingDoc}\n${descValue}`.trim() : descValue;
+        currentMethod.description = combined;
+        currentMethod.hash = this.calculateHash(
+          `${currentMethod.name}(${currentMethod.params.join(',')}):${currentMethod.returnType}:${currentMethod.description}`
+        );
+        pendingDoc = null;
+        return;
+      }
+
+      if (trimmed.startsWith('description:')) {
+        const descValue = trimmed.substring(13).trim().replace(/^['"]|['"]$/g, '');
+        const combined = pendingDoc ? `${pendingDoc}\n${descValue}`.trim() : descValue;
+        currentBlock.description = combined;
+        pendingDoc = null;
+        currentMethod = null;
+        return;
+      }
+
+      if (currentSection === 'data' && trimmed.includes(':')) {
+        const colonIndex = trimmed.indexOf(':');
+        if (colonIndex > 0) {
+          const namePart = trimmed.slice(0, colonIndex).trim().replace(/[,;]/g, '');
+          if (namePart && namePart !== 'description') {
+            let typePart = trimmed.slice(colonIndex + 1).trim();
+            if (typePart.endsWith(';')) {
+              typePart = typePart.slice(0, -1).trim();
+            }
+            if (typePart) {
+              const field = {
+                name: namePart,
+                type: typePart,
+                description: pendingDoc || ''
+              };
+              field.hash = this.calculateHash(
+                `${field.name}:${field.type}:${field.description}`
+              );
+              currentBlock.fields.push(field);
+            }
           }
         }
-        // Parse component method signature
-        else if (currentSection === 'component' && trimmed.match(/func\s+\w+\s*\([^)]*\)\s*:\s*\w+/)) {
-          const match = trimmed.match(/func\s+(\w+)\s*\(([^)]*)\)\s*:\s*(\w+)/);
-          if (match) {
-            currentMethod = {
-              name: match[1],
-              params: match[2] ? match[2].split(',').map(p => p.trim()).filter(p => p) : [],
-              returnType: match[3].trim(),
-              description: '',
-              hash: this.calculateHash(`${match[1]}(${match[2]}):${match[3]}`)
+        pendingDoc = null;
+        currentMethod = null;
+        return;
+      }
+
+      if (currentSection === 'component' && trimmed.startsWith('func ')) {
+        const signature = trimmed.replace(/;\s*$/, '');
+        let methodMatch = signature.match(
+          /^func\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*:\s*([A-Za-z0-9_<>,.\[\]]+)$/
+        );
+        let method = null;
+
+        if (methodMatch) {
+          method = {
+            name: methodMatch[1],
+            params: methodMatch[2] ? methodMatch[2].split(',').map(p => p.trim()).filter(Boolean) : [],
+            returnType: methodMatch[3].trim()
+          };
+        } else {
+          methodMatch = signature.match(
+            /^func\s+([A-Za-z0-9_<>,.\[\]]+)\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)$/
+          );
+          if (methodMatch) {
+            method = {
+              name: methodMatch[2],
+              params: methodMatch[3] ? methodMatch[3].split(',').map(p => p.trim()).filter(Boolean) : [],
+              returnType: methodMatch[1].trim()
             };
-            inMethodBody = true;
           }
         }
-        // Parse method description inside method body
-        else if (inMethodBody && currentMethod && trimmed.startsWith('description:')) {
-          currentMethod.description = trimmed.substring(13).trim().replace(/"/g, '');
+
+        if (method) {
+          const methodObj = {
+            ...method,
+            description: pendingDoc || ''
+          };
+          methodObj.hash = this.calculateHash(
+            `${methodObj.name}(${methodObj.params.join(',')}):${methodObj.returnType}:${methodObj.description}`
+          );
+          currentBlock.methods.push(methodObj);
+          currentMethod = methodObj;
+        } else {
+          currentMethod = null;
         }
-        // Parse aspect properties (including around patterns)
-        else if (currentSection === 'aspect') {
-          if (trimmed.includes(':')) {
-            const [key, value] = trimmed.split(':').map(s => s.trim());
-            if (key && value && key !== 'description') {
-              currentBlock.properties[key] = value.replace(/"/g, '');
+        pendingDoc = null;
+        return;
+      }
+
+      if (currentSection === 'aspect') {
+        if (trimmed.includes(':')) {
+          const [key, value] = trimmed.split(':').map(s => s.trim());
+          if (key && value && key !== 'description') {
+            currentBlock.properties[key] = value.replace(/"/g, '');
+          }
+        } else if (trimmed.match(/^(around|before|after|target)\s+/)) {
+          const parts = trimmed.split(/\s+/);
+          if (parts.length >= 2) {
+            currentBlock.properties[parts[0]] = parts.slice(1).join(' ');
+          }
+        } else if (pendingDoc && !currentBlock.description) {
+          currentBlock.description = pendingDoc;
+        }
+        pendingDoc = null;
+        currentMethod = null;
+        return;
+      }
+
+      pendingDoc = null;
+      currentMethod = null;
+    };
+
+    for (const line of lines) {
+      let remainder = line;
+
+      while (remainder !== null) {
+        if (inDocComment) {
+          const endIndex = remainder.indexOf('*/');
+          if (endIndex === -1) {
+            docLines.push(remainder);
+            remainder = null;
+          } else {
+            const beforeEnd = remainder.slice(0, endIndex);
+            if (beforeEnd.length > 0) {
+              docLines.push(beforeEnd);
             }
-          } else if (trimmed.match(/^(around|before|after|target)\s+/)) {
-            // Handle aspect patterns like "around com/aa/bb/*"
-            const parts = trimmed.split(/\s+/);
-            if (parts.length >= 2) {
-              currentBlock.properties[parts[0]] = parts.slice(1).join(' ');
+            const doc = finalizeDoc();
+            if (doc) {
+              pendingDoc = doc;
+            }
+            remainder = remainder.slice(endIndex + 2);
+            inDocComment = false;
+            if (remainder.trim() === '') {
+              remainder = null;
             }
           }
+          continue;
+        }
+
+        const startIndex = remainder.indexOf('/**');
+        if (startIndex === -1) {
+          if (remainder !== '') {
+            processCode(remainder);
+          }
+          remainder = null;
+        } else {
+          const before = remainder.slice(0, startIndex);
+          processCode(before);
+          remainder = remainder.slice(startIndex + 3);
+          inDocComment = true;
         }
       }
     }
@@ -415,23 +564,36 @@ class CDDUtils {
       if (data.extends) {
         hashes.data[data.name].extends = data.extends;
       }
+      if (data.description) {
+        hashes.data[data.name].__description = this.calculateHash(`${data.name}:${data.description}`);
+      }
       for (const field of data.fields) {
         hashes.data[data.name][field.name] = field.hash;
+        if (field.description) {
+          hashes.data[data.name][`${field.name}.__description`] = this.calculateHash(`${field.name}:${field.description}`);
+        }
       }
     }
 
     // Extract component hashes
     for (const component of parsed.components) {
       hashes.components[component.name] = {};
+      if (component.description) {
+        hashes.components[component.name].__description = this.calculateHash(`${component.name}:${component.description}`);
+      }
       for (const method of component.methods) {
         hashes.components[component.name][method.name] = method.hash;
+        if (method.description) {
+          hashes.components[component.name][`${method.name}.__description`] = this.calculateHash(`${method.name}:${method.description}`);
+        }
       }
     }
 
     // Extract aspect hashes
     for (const aspect of parsed.aspects) {
+      const descriptionPart = aspect.description ? `:${aspect.description}` : '';
       hashes.aspects[aspect.name] = {
-        hash: this.calculateHash(`${aspect.name}:${JSON.stringify(aspect.properties)}`)
+        hash: this.calculateHash(`${aspect.name}:${JSON.stringify(aspect.properties)}${descriptionPart}`)
       };
     }
 
@@ -509,6 +671,7 @@ class CDDUtils {
       const { contract, parsed } = contractData;
       const hashes = this.extractHashes(parsed, contract.name, contract.package);
       const contractKey = `${contract.package || 'default'}:${contract.name}`;
+      hashes.lastUpdated = new Date().toISOString();
       allHashes[contractKey] = hashes;
     }
 
@@ -532,9 +695,10 @@ class CDDUtils {
         csv += `section:data\n`;
         const data = contractHash.data[dataName];
         for (const fieldName in data) {
-          if (fieldName !== 'extends') { // Skip the extends field as it's not a hashable field
-            csv += `${dataName}.${fieldName},${data[fieldName]}\n`;
+          if (fieldName === 'extends') {
+            continue;
           }
+          csv += `${dataName}.${fieldName},${data[fieldName]}\n`;
         }
       }
 

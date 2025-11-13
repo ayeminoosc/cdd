@@ -12,7 +12,16 @@
       "Bash(else)",
       "Bash(fi:*)",
       "Bash(__NEW_LINE__ else)",
-      "Bash(then echo \"\")"
+      "Bash(then echo \"\")",
+      "Bash(./gradlew:*)",
+      "Bash(java:*)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(export:*)",
+      "Bash(OPENROUTER_API_KEY=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 OPENROUTER_MODEL=google/gemini-2.0-flash-exp ./gradlew runSimpleTest:*)",
+      "Bash(OPENROUTER_API_KEY=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 OPENROUTER_MODEL=openai/gpt-3.5-turbo ./gradlew runSimpleTest:*)",
+      "Bash(OPENROUTER_API_KEY=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 OPENROUTER_MODEL=openai/gpt-3.5-turbo ./gradlew test:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
