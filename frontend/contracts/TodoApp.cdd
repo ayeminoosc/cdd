@@ -56,3 +56,10 @@ flow MainNavigation {
   route TodoEditScreen.onSave -> TodoListScreen
   route TodoEditScreen.onCancel -> back
 }
+
+/**
+ * Application Entry Point
+ */
+widget MainEntry {
+  // Bootstrap component
+}

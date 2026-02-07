@@ -35,3 +35,10 @@ service TodoService {
   func updateTodo(id: string, todo: Todo): Todo
   func deleteTodo(id: string): void
 }
+
+/**
+ * Main Application Entry Point
+ */
+service TodoBackendApplication {
+  func main(args: string[]): void
+}
