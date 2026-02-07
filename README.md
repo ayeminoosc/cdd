@@ -41,20 +41,7 @@ Contract-Driven Development is a framework that puts human architects back in co
 1. **Contracts First**: Humans define precise contracts that specify exactly what should be built
 2. **AI Implementation**: LLMs generate code based on these contracts with strict guidelines
 3. **Validation Layer**: The system ensures generated code matches contract specifications
-4. **Multi-Module Support**: Handle complex projects with different languages and frameworks
-
-### Key Features
-
-- ✅ **Universal Compatibility**: Works with any AI model configured in your environment (local, open-source, commercial)
-- ✅ **Cost-Effective**: No expensive high-reasoning AI required - works with capable affordable models
-- ✅ **Language Agnostic**: Works with TypeScript, Java, JavaScript, and any programming language
-- ✅ **Framework Agnostic**: Compatible with React, Spring Boot, Express, Node.js, and any framework
-- ✅ **Local First**: Run models locally for complete privacy and cost control
-- ✅ **Package Structure Preservation**: Maintain proper package hierarchies
-- ✅ **Module-Specific Instructions**: Different implementation guidelines per module
-- ✅ **Hash-Based Change Detection**: Only regenerate what actually changed
-- ✅ **Clean Build Support**: Complete regeneration when needed
-- ✅ **Cross-Cutting Concerns**: Aspects for validation, logging, error handling
+4. **Universal Development**: Build Backends (Services/Data) AND Frontends (Screens/Navigation) using the same contract language.
 
 ## Quick Start
 
@@ -74,6 +61,134 @@ cp -r .claude /path/to/your/project/
 ```
 
 That's it! No dependencies, no npm install required.
+
+## The CDD Language (New!)
+
+CDD has evolved to support full-stack development, including a "No-Code" style syntax for modern UI development (React, Compose, Flutter).
+
+### 1. Backend & Data (The Core)
+Standard definitions for entities and business logic.
+
+```cdd
+/** User entity */
+data User {
+  id: string
+  name: string
+  email: string
+}
+
+/** Business Logic Service */
+service UserService {
+  /** Create a new user */
+  func createUser(user: User): User
+}
+```
+
+### 2. Frontend & UI (The New "No-Code" Layer)
+Define **Screens**, **Widgets**, and **Navigation Flows** without writing a single line of JSX or Kotlin.
+
+#### **Screens (`screen`)**
+Top-level pages/views. They hold **state** and **connect** to the backend.
+
+```cdd
+screen LoginScreen {
+  // Local mutable state
+  state email: string
+  state isLoading: boolean
+
+  // User interactions (Events)
+  func onLoginClicked(): void
+  
+  // Wiring: When 'onLoginClicked' happens, call the API
+  connect onLoginClicked -> UserService.login
+}
+```
+
+#### **Widgets (`widget`)**
+Reusable UI components. They receive **props** and emit events.
+
+```cdd
+widget Header {
+  prop title: string
+  func onBackClicked(): void
+}
+```
+
+#### **Navigation (`flow`)**
+Define the user journey using Arrow Syntax.
+
+```cdd
+flow AuthFlow {
+  start: LoginScreen
+  
+  // Rules: Source.Event -> Destination
+  route LoginScreen.onSuccess -> Dashboard
+  route LoginScreen.onForgotPassword -> ResetPassword
+}
+```
+
+## Example: Building a Todo App
+
+### 1. Define the Contract (`frontend/contracts/TodoApp.cdd`)
+
+```cdd
+/** Data Model */
+data Todo {
+  id: string
+  title: string
+}
+
+/** Dashboard Screen */
+screen TodoList {
+  state items: Todo[]
+  
+  func onAdd(): void
+  func onSelect(id: string): void
+
+  // Auto-fetch data on load
+  connect onMount -> TodoService.getAll
+}
+
+/** Edit Screen */
+screen TodoEdit {
+  prop id: string?
+  
+  func onSave(): void
+  func onCancel(): void
+  
+  connect onSave -> TodoService.save
+}
+
+/** Navigation */
+flow Main {
+  start: TodoList
+  
+  route TodoList.onAdd -> TodoEdit
+  route TodoList.onSelect -> TodoEdit
+  route TodoEdit.onSave -> TodoList
+  route TodoEdit.onCancel -> back
+}
+```
+
+### 2. Build & Implement
+
+Run the build command:
+```bash
+/cdd build
+```
+
+The AI will generate:
+*   `src/screens/TodoList.tsx` (Complete with useEffect, useState, and API calls)
+*   `src/screens/TodoEdit.tsx` (Complete form logic)
+*   `src/navigation/AppRouter.tsx` (Complete React Router / Navigation setup)
+*   `src/types/Todo.ts`
+
+### 3. Verify & Hash
+
+Once the code works, save the state:
+```bash
+/cdd hash
+```
 
 ### Agent Compatibility
 

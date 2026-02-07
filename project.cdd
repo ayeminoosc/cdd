@@ -5,22 +5,25 @@ project {
     frontend {
       name: "Frontend App"
       language: "typescript"
+      buildTool: "npm"
       contracts: "frontend/contracts"
-      output: "frontend/generated"
+      output: "frontend/src"
     }
 
     backend {
       name: "Backend App"
       language: "java"
+      buildTool: "gradle"
       contracts: "backend/contracts"
-      output: "backend/generated"
+      output: "backend/src/main/java"
     }
 
     shared {
       name: "Shared Core"
       language: "typescript"
+      buildTool: "npm"
       contracts: "shared/contracts"
-      output: "shared/generated"
+      output: "shared/src"
     }
   }
 

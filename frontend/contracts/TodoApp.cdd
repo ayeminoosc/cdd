@@ -1,0 +1,58 @@
+/**
+ * Data Model (Matches Backend)
+ */
+data Todo {
+  id: string
+  title: string
+  isCompleted: boolean
+}
+
+/**
+ * Reusable Todo Row Widget
+ */
+widget TodoRow {
+  prop item: Todo
+  func onToggle(): void
+  func onDelete(): void
+}
+
+/**
+ * Main List Screen
+ */
+screen TodoListScreen {
+  state todos: Todo[]
+  state isLoading: boolean
+
+  func onAddClicked(): void
+  func onTodoSelected(id: string): void
+  
+  // Wiring
+  connect onMount -> TodoService.getAllTodos
+}
+
+/**
+ * Edit/Create Screen
+ */
+screen TodoEditScreen {
+  prop todoId: string?
+  
+  state title: string
+  state isSaving: boolean
+
+  func onSave(): void
+  func onCancel(): void
+  
+  connect onSave -> TodoService.createTodo
+}
+
+/**
+ * Navigation Flow
+ */
+flow MainNavigation {
+  start: TodoListScreen
+  
+  route TodoListScreen.onAddClicked -> TodoEditScreen
+  route TodoListScreen.onTodoSelected -> TodoEditScreen
+  route TodoEditScreen.onSave -> TodoListScreen
+  route TodoEditScreen.onCancel -> back
+}

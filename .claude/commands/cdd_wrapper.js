@@ -238,6 +238,38 @@ if (command === 'clean') {
     console.error(`❌ Error: ${error.message}`);
     process.exit(1);
   }
+} else if (command === 'run') {
+  console.log('🚀 Starting application modules...');
+
+  try {
+    cdd.loadProjectConfig();
+    const { exec } = require('child_process');
+
+    if (cdd.projectConfig.modules) {
+      for (const [moduleKey, moduleConfig] of Object.entries(cdd.projectConfig.modules)) {
+        const buildTool = moduleConfig.buildTool;
+        if (!buildTool) continue;
+
+        let runCmd = '';
+        if (buildTool === 'npm') {
+          runCmd = 'npm run dev';
+        } else if (buildTool === 'maven') {
+          runCmd = 'mvn spring-boot:run';
+        } else if (buildTool === 'gradle') {
+          runCmd = './gradlew bootRun';
+        }
+
+        if (runCmd) {
+          console.log(`📦 [${moduleKey}] Starting with ${buildTool}: ${runCmd}`);
+          // In a real CLI, we might use spawn to keep it interactive
+          // For now, we'll just log that we would start it.
+          console.log(`💡 To run this module manually: cd ${moduleKey} && ${runCmd}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Error: ${error.message}`);
+  }
 } else if (command === 'status') {
   console.log('📋 Contract Status Report');
   console.log('========================');

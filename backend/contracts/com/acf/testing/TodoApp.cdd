@@ -1,117 +1,37 @@
-// Todo List App Contract
-
-component TodoService {
-  description: "Manages todo items and user lists"
-
-  func getAllTodos(userId: string): Todo[] {
-    description: "Get all todos for a specific user"
-  }
-
-  func getTodoById(todoId: string): Todo? {
-    description: "Get a specific todo by ID"
-  }
-
-  func createTodo(todo: Todo): Todo {
-    description: "Create a new todo item"
-  }
-
-  func updateTodo(todoId: string, todo: Todo): Todo {
-    description: "Update an existing todo"
-  }
-
-  func deleteTodo(todoId: string): boolean {
-    description: "Delete a todo item"
-  }
-
-  func markTodoComplete(todoId: string): Todo {
-    description: "Mark a todo as completed"
-  }
-
-  func getTodosByStatus(userId: string, status: TodoStatus): Todo[] {
-    description: "Get todos filtered by status"
-  }
-}
-
-component UserService {
-  description: "Manages user accounts and authentication"
-
-  func createUser(user: User): User {
-    description: "Create a new user account"
-  }
-
-  func getUserById(userId: string): User? {
-    description: "Get user by ID"
-  }
-
-  func getUserByEmail(email: string): User? {
-    description: "Get user by email address"
-  }
-
-  func updateUser(userId: string, user: User): User {
-    description: "Update user information"
-  }
-
-  func deleteUser(userId: string): boolean {
-    description: "Delete user account"
-  }
-}
-
-data Todo {
-  description: "Todo item entity"
-  id: string
-  title: string
-  description: string
-  status: TodoStatus
-  priority: Priority
-  userId: string
-  createdAt: datetime
-  updatedAt: datetime
-  dueDate: datetime?
-}
-
+/**
+ * User Entity
+ */
 data User {
-  description: "User entity"
   id: string
   name: string
   email: string
-  passwordHash: string
-  createdAt: datetime
-  updatedAt: datetime
 }
 
-data TodoStatus {
-  description: "Todo status enumeration"
-  PENDING: string
-  IN_PROGRESS: string
-  COMPLETED: string
-  CANCELLED: string
+/**
+ * Todo Entity
+ */
+data Todo {
+  id: string
+  title: string
+  isCompleted: boolean
+  userId: string
 }
 
-data Priority {
-  description: "Priority levels"
-  LOW: string
-  MEDIUM: string
-  HIGH: string
-  URGENT: string
+/**
+ * Service to manage Users
+ */
+service UserService {
+  func createUser(user: User): User
+  func getUserById(id: string): User?
 }
 
-aspect Validation {
-  description: "Validates input data for all operations"
-  before "component.*" {
-    description: "Validate all input parameters"
-  }
-}
-
-aspect Logging {
-  description: "Logs all todo operations"
-  around "component.*" {
-    description: "Log method execution with timing"
-  }
-}
-
-aspect ErrorHandling {
-  description: "Handles errors gracefully"
-  after "component.*" {
-    description: "Catch and log any errors"
-  }
+/**
+ * Service to manage Todos
+ */
+service TodoService {
+  func getAllTodos(): Todo[]
+  func getTodoById(id: string): Todo?
+  func createTodo(todo: Todo): Todo
+  func updateTodo(id: string, todo: Todo): Todo
+  func deleteTodo(id: string): void
 }

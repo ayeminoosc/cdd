@@ -71,8 +71,9 @@ if [ "$1" = "build" ]; then
       console.log('```');
       console.log('');
 
+      // Display detailed parsed structure
       if (c.parsed.data && c.parsed.data.length > 0) {
-        console.log(\`**Data (\${c.parsed.data.length})**:\`);
+        console.log(\`**Data Entities (\${c.parsed.data.length})**:\`);
         c.parsed.data.forEach(d => {
           console.log(\`- **\${d.name}**: \${d.fields.map(f => \`\${f.name}: \${f.type}\`).join(', ')}\`);
           if (d.extends) console.log(\`  - Extends: \${d.extends}\`);
@@ -80,19 +81,51 @@ if [ "$1" = "build" ]; then
         console.log('');
       }
 
-      if (c.parsed.components && c.parsed.components.length > 0) {
-        console.log(\`**Components (\${c.parsed.components.length})**:\`);
-        c.parsed.components.forEach(comp => {
-          console.log(\`- **\${comp.name}**: \${comp.methods.map(m => \`\${m.name}(\${m.params.join(', ')}): \${m.returnType}\`).join(', ')}\`);
-          if (comp.description) console.log(\`  - Description: \${comp.description}\`);
+      // Display Screens
+      if (c.parsed.screens && c.parsed.screens.length > 0) {
+        console.log(\`**Screens (\${c.parsed.screens.length})**:\`);
+        c.parsed.screens.forEach(s => {
+          console.log(\`- **\${s.name}**\`);
+          if (s.description) console.log(\`  - Description: \${s.description}\`);
+          if (s.props.length) console.log(\`  - Props: \${s.props.map(p => \`\${p.name}: \${p.type}\`).join(', ')}\`);
+          if (s.state.length) console.log(\`  - State: \${s.state.map(st => \`\${st.name}: \${st.type}\`).join(', ')}\`);
+          if (s.methods.length) console.log(\`  - Events: \${s.methods.map(m => m.name).join(', ')}\`);
+          if (s.connections.length) console.log(\`  - Connections: \${s.connections.map(c => \`\${c.trigger} -> \${c.target}\`).join(', ')}\`);
         });
         console.log('');
       }
 
-      if (c.parsed.aspects && c.parsed.aspects.length > 0) {
-        console.log(\`**Aspects (\${c.parsed.aspects.length})**:\`);
-        c.parsed.aspects.forEach(a => {
-          console.log(\`- **\${a.name}**\${a.description ? \` - \${a.description}\` : ''}\`);
+      // Display Widgets
+      if (c.parsed.widgets && c.parsed.widgets.length > 0) {
+        console.log(\`**Widgets (\${c.parsed.widgets.length})**:\`);
+        c.parsed.widgets.forEach(w => {
+          console.log(\`- **\${w.name}**\`);
+          if (w.description) console.log(\`  - Description: \${w.description}\`);
+          if (w.props.length) console.log(\`  - Props: \${w.props.map(p => \`\${p.name}: \${p.type}\`).join(', ')}\`);
+          if (w.state.length) console.log(\`  - State: \${w.state.map(st => \`\${st.name}: \${st.type}\`).join(', ')}\`);
+          if (w.methods.length) console.log(\`  - Events: \${w.methods.map(m => m.name).join(', ')}\`);
+        });
+        console.log('');
+      }
+
+      // Display Flows
+      if (c.parsed.flows && c.parsed.flows.length > 0) {
+        console.log(\`**Flows (\${c.parsed.flows.length})**:\`);
+        c.parsed.flows.forEach(f => {
+          console.log(\`- **\${f.name}** (Start: \${f.start})\`);
+          if (f.description) console.log(\`  - Description: \${f.description}\`);
+          if (f.routes.length) console.log(\`  - Routes: \${f.routes.map(r => \`\${r.source} -> \${r.target}\`).join(', ')}\`);
+        });
+        console.log('');
+      }
+
+      // Display Services (Backwards Compat)
+      const services = c.parsed.components.filter(comp => comp.type === 'component' || comp.type === 'service' || !comp.type);
+      if (services.length > 0) {
+        console.log(\`**Services/Components (\${services.length})**:\`);
+        services.forEach(comp => {
+          console.log(\`- **\${comp.name}**: \${comp.methods.map(m => \`\${m.name}(\${m.params.join(', ')}): \${m.returnType}\`).join(', ')}\`);
+          if (comp.description) console.log(\`  - Description: \${comp.description}\`);
         });
         console.log('');
       }
@@ -116,32 +149,27 @@ if [ "$1" = "build" ]; then
           }
 
           console.log('');
-          console.log(\`**Contracts to implement for \${moduleKey}:\`);
-
+          console.log(\`**Implementation Plan for \${moduleKey}:**\`);
+          
           module.contracts.forEach(c => {
-            console.log(\`- **\${c.name}** (\${c.changeType})\`);
+            // Frontend specific files
+            if (c.parsed.screens && c.parsed.screens.length > 0) {
+              console.log(\`  - **Screens**: \${c.parsed.screens.map(s => \`\${module.output}/screens/\${s.name}.\${module.language === 'typescript' ? 'tsx' : 'kt'}\`).join(', ')}\`);
+            }
+            if (c.parsed.widgets && c.parsed.widgets.length > 0) {
+              console.log(\`  - **Components**: \${c.parsed.widgets.map(w => \`\${module.output}/components/\${w.name}.\${module.language === 'typescript' ? 'tsx' : 'kt'}\`).join(', ')}\`);
+            }
+            if (c.parsed.flows && c.parsed.flows.length > 0) {
+              console.log(\`  - **Navigation**: \${module.output}/navigation/AppRouter.\${module.language === 'typescript' ? 'tsx' : 'kt'}\`);
+            }
+            
+            // Backend/Shared specific files
+            const services = c.parsed.components.filter(comp => comp.type === 'component' || comp.type === 'service' || !comp.type);
+            if (services.length > 0) {
+              console.log(\`  - **Services**: \${services.map(s => \`\${module.output}/\${c.extractedPackage ? c.extractedPackage.replace(/\\./g, '/') + '/' : ''}\${s.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
+            }
             if (c.parsed.data && c.parsed.data.length > 0) {
-              console.log(\`  - Data: \${c.parsed.data.map(d => d.name).join(', ')}\`);
-            }
-            if (c.parsed.components && c.parsed.components.length > 0) {
-              console.log(\`  - Components: \${c.parsed.components.map(comp => comp.name).join(', ')}\`);
-            }
-            if (c.parsed.aspects && c.parsed.aspects.length > 0) {
-              console.log(\`  - Aspects: \${c.parsed.aspects.map(a => a.name).join(', ')}\`);
-            }
-          });
-
-          console.log('');
-          console.log(\`**Files to implement for \${moduleKey}:\`);
-          module.contracts.forEach(c => {
-            if (c.parsed.data && c.parsed.data.length > 0) {
-              console.log(\`- Data: \${c.parsed.data.map(d => \`\${module.output}/\${d.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
-            }
-            if (c.parsed.components && c.parsed.components.length > 0) {
-              console.log(\`- Components: \${c.parsed.components.map(comp => \`\${module.output}/\${comp.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
-            }
-            if (c.parsed.aspects && c.parsed.aspects.length > 0) {
-              console.log(\`- Aspects: \${c.parsed.aspects.map(a => \`\${module.output}/\${a.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
+               console.log(\`  - **Data Models**: \${c.parsed.data.map(d => \`\${module.output}/\${c.extractedPackage ? c.extractedPackage.replace(/\\./g, '/') + '/' : ''}\${d.name}.\${module.language === 'java' ? 'java' : 'ts'}\`).join(', ')}\`);
             }
           });
           console.log('');
@@ -149,12 +177,16 @@ if [ "$1" = "build" ]; then
         }
       });
     } else {
-      // Fallback to old structure if modules not available
       console.log('⚠️  Module structure not available in context');
     }
     console.log('');
-    console.log('## Final Instruction');
-    console.log('Implement each module following its specific instructions above.');
+    console.log('## Implementation Guidelines');
+    console.log('1. **Screens (`screen`)**: Implement as top-level pages. Use the `state` fields for local state management (useState/ViewModel). Connect lifecycle events (like `onMount`) to the backend calls defined in `connect`.');
+    console.log('2. **Widgets (`widget`)**: Implement as reusable, pure components. They receive `props` and emit events via functions.');
+    console.log('3. **Navigation (`flow`)**: Implement the routing logic. `route Source.Event -> Target` means when `Event` happens on `Source`, navigate to `Target`.');
+    console.log('4. **Backend Wiring (`connect`)**: If a screen has `connect Event -> Service.Method`, generate the API client call automatically within that event handler.');
+    console.log('5. **Visuals**: Use the `description` fields to determine layout, styling, and composition of widgets.');
+    console.log('');
     console.log('After implementation, run: `/cdd hash` to update hashes.');
 
   } catch (error) {
