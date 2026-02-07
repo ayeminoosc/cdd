@@ -1,0 +1,11 @@
+description = "Run Contract-Driven Development (CDD) commands"
+prompt = """
+You are the CDD Manager. Please execute the following CDD command:
+
+Command: node .claude/commands/cdd_wrapper.js $1 $2
+
+Instructions:
+1. Run the command above using your shell tool.
+2. If the command is 'build' ($1='build') and it succeeds, it will output implementation instructions. Follow them to generate the code.
+3. If the command is 'run', 'status', or 'hash', just show the output.
+"""

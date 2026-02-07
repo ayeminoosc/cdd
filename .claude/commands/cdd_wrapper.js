@@ -186,8 +186,10 @@ if (command === 'clean') {
           name: c.contract.name,
           package: c.contract.package,
           path: c.contract.path,
-          relativePath: c.contract.relativePath
+          relativePath: c.contract.relativePath,
+          content: c.contract.content // Required by renderer
         },
+        parsed: c.parsed, // Required by renderer
         status: 'needs_implementation',
         changeType: changes.added.includes(c) ? 'new' : 'modified'
       }));
@@ -216,6 +218,11 @@ if (command === 'clean') {
 
       console.log(`✅ Implementation context prepared for ${contractsToImplement.length} contract(s)`);
       console.log('📄 Context saved to: build/implementation_context.json');
+
+      // Automatically render the instructions for the agent
+      console.log('\n🤖 Generating implementation instructions...');
+      require('./cdd_renderer.js');
+
     }
   } catch (error) {
     console.error(`❌ Error: ${error.message}`);

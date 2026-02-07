@@ -47,20 +47,31 @@ Contract-Driven Development is a framework that puts human architects back in co
 
 ### Installation
 
-CDD is currently available as a Claude Code tool and will expand to support other AI agents:
+CDD is designed to be universally compatible.
 
 1. **Copy the CDD tool** to your project:
-```bash
-# Copy the .claude folder to your existing project
-cp -r .claude /path/to/your/project/
-```
+   - Copy the `.claude` folder.
+   - Copy `cdd.bat` (Windows) and `cdd` (Unix) scripts to your root.
+   - (Optional) Copy `.vscode` if using VS Code.
 
-2. **Start using CDD** in Claude Code CLI:
-```bash
-/cdd build
-```
+2. **Start using CDD**:
 
-That's it! No dependencies, no npm install required.
+   **Claude Code CLI:**
+   ```bash
+   /cdd build
+   ```
+
+   **Gemini CLI / Terminal:**
+   ```bash
+   ./cdd build
+   ```
+   *Or just ask Gemini: "Run cdd build"*
+
+   **VS Code / GitHub Copilot:**
+   - Use **Terminal**: `./cdd build`
+   - Use **Tasks**: Press `Ctrl+Shift+B` (or Cmd+Shift+B) -> Select `CDD: Build`
+
+### Agent Compatibility
 
 ## The CDD Language (New!)
 
@@ -124,6 +135,33 @@ flow AuthFlow {
   // Rules: Source.Event -> Destination
   route LoginScreen.onSuccess -> Dashboard
   route LoginScreen.onForgotPassword -> ResetPassword
+}
+```
+
+## Designing with CDD
+
+You can define the "Look and Feel" of your application using a special contract.
+
+**Create `DesignSystem.cdd`:**
+The AI detects this file and uses it to generate your global CSS, Tailwind Config, or Android Theme.
+
+```cdd
+/**
+ * Global Design System.
+ * 
+ * THEME: Modern Minimalist.
+ * COLORS: 
+ * - Primary: #000000 (Black)
+ * - Background: #FFFFFF (White)
+ * - Accent: #FFD700 (Yellow)
+ * 
+ * SHAPES:
+ * - Buttons: Sharp corners (radius: 0px).
+ * - Inputs: Underlined only.
+ */
+data DesignSystem {
+  theme: string
+  darkMode: boolean
 }
 ```
 
