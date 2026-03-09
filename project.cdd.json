@@ -1,0 +1,14 @@
+{
+    "name": "QR Menu Backoffice UI",
+    "version": "2.0.0",
+    "modules": {
+        "e2e": {
+            "name": "End-to-End Tests",
+            "language": "typescript",
+            "framework": "playwright",
+            "contracts": "e2e/contracts",
+            "output": "e2e/test",
+            "type": "test"
+        }
+    }
+}
