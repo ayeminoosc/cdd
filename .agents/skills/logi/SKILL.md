@@ -16,6 +16,21 @@ You are the Logi Translation Expert. Logi is a platform-agnostic DSL that descri
 
 ---
 
+## Table of Contents
+
+| Section | Purpose |
+|---|---|
+| [Argument Parsing](#argument-parsing) | How to parse command + module + baseDir |
+| [`build` Command](#build-command) | Translate .logi → code (JSON-first, incremental) |
+| [`status` Command](#status-command) | Show diff of what has changed |
+| [`reverse` Command](#reverse-command) | Sync .logi from code (drift + onboard) |
+| [`init` Command](#init-command) | Scaffold a new Logi workspace |
+| [Logi DSL Reference](#logi-dsl-reference) | Full grammar for all keywords and annotations |
+| [LogiD DSL Reference](#logid-dsl-reference) | Full grammar for .logid design files |
+| [Operational Constraints](#operational-constraints) | Rules the agent must always follow |
+
+---
+
 ## Argument Parsing
 
 The input will be one of:
@@ -199,6 +214,62 @@ This is the non-negotiable goal. The `.logi` file produced by `reverse` is not a
 - `check email is valid` → **wrong** — should include the exact failure type and message value from the code
 - omitting `= false` from `state is_loading: boolean = false` → causes wrong code generation
 - omitting `on submit_login.failed -> set is_loading = false` → causes missing handler in output
+
+### Hard structural rules — NEVER violate these
+
+These are not style preferences — violating them produces unparseable `.logi` files.
+
+**1. No curly braces. Ever.**
+Logi uses `end` to close blocks, not `{` / `}`. There are no curly braces anywhere in Logi syntax.
+
+```
+# WRONG:
+usecase AttachmentConverter {
+  usecase convertToDatabaseColumn(attachments: list?): string?
+}
+
+# CORRECT — each method becomes its own flat top-level usecase:
+usecase convert_attachment_to_db for attachments: attachment[]? returns text?
+  step serialize {attachments} to JSON string using object mapper
+  return the JSON string
+end
+
+usecase convert_db_to_attachment for db_data: text? returns attachment[]?
+  step deserialize {db_data} from JSON to list of {attachment} using object mapper
+  return the list
+end
+```
+
+**2. No nesting of declarations inside declarations.**
+Every `type`, `failure`, `usecase`, `widget`, `screen`, `flow`, `job` is a **flat top-level block**. One class with multiple methods → multiple separate `usecase` blocks at the top level. Never wrap multiple usecases inside another usecase or type.
+
+**3. Annotations go BEFORE the declaration keyword, on their own lines — never inside the block body.**
+
+```
+# WRONG — declaration-level annotations inside type body:
+type Memory
+  @entity
+  @table("memories")
+  id: text
+  user_id: text
+end
+
+# CORRECT — declaration-level annotations immediately before the keyword:
+@entity
+@table("memories")
+type Memory
+  @id
+  id: text
+  user_id: text
+end
+```
+
+- **Declaration-level annotations** (`@entity`, `@table`, `@endpoint`, `@route`, `@requires_auth`, `@render`, `@test_id`, etc.) → go on the line(s) **immediately before** the opening keyword (`type`, `usecase`, `widget`, `screen`), outside the block.
+- **Field-level annotations** (`@id`, `@unique`, `@index`, `@generated`, `@default`, `@relation`) → go on the line **immediately before the field** they annotate, indented inside the block.
+
+**4. `usecase` body contains only Logi body primitives.** Valid: `check`, `when`, `each`, `repeat`, `step`, `return`, `call`, comments (`#`). If the source is a class, the class name does not become a wrapping usecase — map each method to its own top-level `usecase`.
+
+**5. No implementation-language syntax inside `.logi`.** No `if`, `for`, `try`, `throw`, semicolons, type casts, generics (`List<Attachment>`), or language keywords. Use only Logi primitives.
 
 Two detection modes run in one pass:
 - **Drift mode**: output file is in `hashes.json` but its content hash changed → update existing `.logi` declaration
