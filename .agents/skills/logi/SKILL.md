@@ -127,6 +127,7 @@ Process each entry in `context.items`. The `translationRules` and `config` field
 - Use `logi.md` File Organization rules for filename conventions within the resolved subdirectory.
 - Generate all output files. Write each to disk.
 - Run: `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile> <out1> [out2...]`
+  - All paths are **relative to the module directory** — use them exactly as they appear in `context.items[].file` and the output paths you wrote.
 
 **`mode: "modified"` or `"new_declaration"` — surgical update:**
 - `declarationText`: the exact changed block to translate
@@ -158,15 +159,14 @@ Process each entry in `context.items`. The `translationRules` and `config` field
   > Task: Surgically update the output file to reflect only this changed declaration. Preserve all other code. Follow translation rules exactly. Return the complete updated file content.
 
 - Write the updated output file(s). Run: `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile> <out1> [out2...]`
-
-### Step 5 — Handle Deleted Declarations
+  - `<logiFile>` = `item.file` from the build context (module-relative). `<out1>` etc. = the output file paths you wrote, also module-relative.
+  - Do **NOT** prepend the module directory name to these paths — they are already relative to it.
 For each entry in `context.deletedDeclarations`:
 - Read `existingOutputs` — these are the source files that contain the deleted declaration's code
 - Instruct LLM to remove only the code corresponding to `declarationName` from each output file
 - Write updated output files
 - Run: `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile> <out1> [out2...]`
-
-### Step 6 — Summary
+  - Same path rules: module-relative, exactly as in the build context.
 Print a summary:
 ```
 Build complete.

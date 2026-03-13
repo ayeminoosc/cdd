@@ -60,7 +60,7 @@
       "patterns": [
         {
           "name": "keyword.control.logi",
-          "match": "\\b(module|type|extends|failure|usecase|for|returns|check|when|otherwise|each|repeat|until|return|end|screen|state|prop|event|action|call|with|show|step|flow|route|on|set|run|go|back|job|system_event)\\b"
+          "match": "\\b(module|type|extends|failure|usecase|component|for|returns|check|when|otherwise|each|repeat|until|return|end|screen|state|prop|event|action|call|with|show|step|flow|route|on|set|run|go|back|job|system_event)\\b"
         },
         {
           "name": "keyword.operator.logi",
@@ -86,7 +86,7 @@
           }
         },
         {
-          "match": "\\b(type|failure|widget|screen|flow)\\s+([a-z_][a-z0-9_]*)",
+          "match": "\\b(type|failure|widget|screen|flow|component)\\s+([a-z_][a-z0-9_]*)",
           "captures": {
             "1": {
               "name": "keyword.control.logi"

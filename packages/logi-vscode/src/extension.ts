@@ -5,6 +5,7 @@ type LogiDefinitionKind =
   | 'type'
   | 'failure'
   | 'usecase'
+  | 'component'
   | 'widget'
   | 'screen'
   | 'flow'
@@ -52,14 +53,14 @@ interface TokenPropertyLine {
   indentLevel: number;
 }
 
-const LOGI_TOP_LEVEL_PATTERN = /^(module|type|failure|usecase|widget|screen|flow|job|system_event)\s+([a-z_][a-z0-9_]*)\b/;
+const LOGI_TOP_LEVEL_PATTERN = /^(module|type|failure|usecase|component|widget|screen|flow|job|system_event)\s+([a-z_][a-z0-9_]*)\b/;
 const LOGI_LOCAL_PATTERN = /^(state|prop|event|action)\s+([a-z_][a-z0-9_]*)\b/;
 const LOGI_FIELD_PATTERN = /^([a-z_][a-z0-9_]*)\s*:\s*([a-z_][a-z0-9_]*(?:\[\]|\?)?)/;
 const LOGI_PARAM_TYPE_PATTERN = /^([a-z_][a-z0-9_]*)\s*:\s*([a-z_][a-z0-9_]*(?:\[\]|\?)?)$/;
 const LOGI_REFERENCE_PATTERN = /\{([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*)\}/g;
 const LOGI_QUALIFIED_NAME_PATTERN = /\b[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*\b/g;
-const LOGI_BLOCK_START_PATTERN = /^(module|type|failure|usecase|widget|screen|flow|job|when|each|repeat|system_event)\b/;
-const LOGI_DECLARATION_START_PATTERN = /^(module|type|failure|usecase|widget|screen|flow|job|system_event)\b/;
+const LOGI_BLOCK_START_PATTERN = /^(type|failure|usecase|component|widget|screen|flow|job|when|each|repeat)\b/;
+const LOGI_DECLARATION_START_PATTERN = /^(module|type|failure|usecase|component|widget|screen|flow|job|system_event)\b/;
 
 const LOGID_BLOCK_START_PATTERN = /^(tokens|style|variant|theme|motion|color|font|space|radius|shadow|size|border|hover|active|focus|disabled|selected|loading|error|on (mobile|tablet|desktop)|\.[a-z_][a-z0-9_]*)\b/;
 const LOGID_TOP_LEVEL_PATTERN = /^(tokens|style|variant|theme|motion)\b/;
@@ -256,7 +257,13 @@ function shouldInsertLogiBlankLine(formatted: string[], line: string, indentLeve
     return false;
   }
 
-  return indentLevel <= 1;
+  // Don't insert a blank line between an annotation and its declaration
+  const lastNonEmpty = [...formatted].reverse().find(l => l.trim() !== '');
+  if (lastNonEmpty && lastNonEmpty.trim().startsWith('@')) {
+    return false;
+  }
+
+  return indentLevel === 0;
 }
 
 function shouldInsertLogidBlankLine(formatted: string[], line: string, indentLevel: number): boolean {

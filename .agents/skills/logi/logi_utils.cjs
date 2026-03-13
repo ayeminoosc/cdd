@@ -682,8 +682,16 @@ function main() {
 
     case 'hash': {
       // logi_utils.cjs hash [module] <logiFile> <out1> [out2...]
-      const logiFile = rest[0];
-      const outputs  = rest.slice(1);
+      // Paths may be module-relative OR root-relative — normalize either to module-relative.
+      const toModuleRel = (p) => {
+        const abs = path.resolve(process.cwd(), p);
+        if (abs.startsWith(baseDir + path.sep) || abs.startsWith(baseDir + '/')) {
+          return path.relative(baseDir, abs).replace(/\\/g, '/');
+        }
+        return p.replace(/\\/g, '/');
+      };
+      const logiFile = rest[0] ? toModuleRel(rest[0]) : null;
+      const outputs  = rest.slice(1).map(toModuleRel);
       if (!logiFile) { console.error('hash: missing logiFile argument'); process.exit(1); }
       recordTranslation(baseDir, logiFile, outputs);
       console.log(`Recorded: ${logiFile} → [${outputs.join(', ')}]`);
@@ -692,7 +700,15 @@ function main() {
 
     case 'delete': {
       // logi_utils.cjs delete [module] <logiFile>
-      const logiFile = rest[0];
+      // Accept module-relative or root-relative path.
+      const toModuleRelD = (p) => {
+        const abs = path.resolve(process.cwd(), p);
+        if (abs.startsWith(baseDir + path.sep) || abs.startsWith(baseDir + '/')) {
+          return path.relative(baseDir, abs).replace(/\\/g, '/');
+        }
+        return p.replace(/\\/g, '/');
+      };
+      const logiFile = rest[0] ? toModuleRelD(rest[0]) : null;
       if (!logiFile) { console.error('delete: missing logiFile argument'); process.exit(1); }
       const outputs = removeFromHashes(baseDir, logiFile);
       console.log(`Removed hash entry for: ${logiFile}`);
