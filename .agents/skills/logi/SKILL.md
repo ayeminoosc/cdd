@@ -364,10 +364,24 @@ Both forms are tried automatically.
    >
    > **Mapping rules — apply ALL of these with maximum specificity:**
    >
+   > **Data classes / DTOs / value objects → `type` block:**
+   > - A Kotlin `data class`, Java POJO/record, or TypeScript interface that only holds fields (no methods) → `type <snake_name>` block
+   > - Every constructor param / field maps to a field line: `<name>: <logi_type>` with `?` if nullable/optional and `= <default>` if a default value is present
+   > - These are NEVER `component` — do not add usecases inside a type
+   >
    > **Classes with multiple methods → `component` block:**
    > - A class with methods maps to `component <snake_name>` containing one `usecase` per method
    > - Do NOT flatten class methods to top-level `usecase` blocks
    > - Class-level annotations go on the line before `component`
+   >
+   > **Every `usecase` MUST close with `end`:**
+   > - Even a void method with no body steps must emit `end` after the `usecase` line
+   > - WRONG: `usecase delete_project for id: text returns void` (bare, no `end`)
+   > - CORRECT:
+   > ```
+   > usecase delete_project for id: text returns void
+   > end
+   > ```
    >
    > **`step` granularity — this is the most important rule:**
    > - Every non-trivial line or logical operation in the implementation body must become its own `step`
@@ -391,7 +405,7 @@ Both forms are tried automatically.
    > - Preserve all usecase annotations: `@endpoint(method, path)`, `@public`, `@requires_auth`, `@role("…")`, `@idempotent`, `@job_handler`
    >
    > **Types / entities / DTOs:**
-   > - Map each field with exact name, type, optional marker (`?`), default value, and all field-level annotations
+   > - A Kotlin `data class`, Java POJO/record, or TypeScript interface with only fields → `type <snake_name>` block — NEVER a `component`. Map every constructor parameter / field as a field line with exact name, type, `?` if nullable/optional, and `= <default>` if a default value is present
    > - Preserve all persistence/serialization annotations: `@entity`, `@table("…")`, `@id`, `@unique`, `@index`, `@generated`, `@default("…")`, `@relation(kind, target)`, `@column("…")`, `@converter`
    >
    > **Widgets / UI components:**
@@ -409,13 +423,15 @@ Both forms are tried automatically.
    >
    > **Before writing, verify mentally — reject if any answer is no:**
    > 1. Every function/method is represented by a `usecase` or `component` + `usecase`
-   > 2. Every guard/null-check/validation is a `check` with exact condition and error details
-   > 3. Every non-trivial code line is a `step` with specific variable/method/service names
-   > 4. No step collapses two or more operations into one vague phrase
-   > 5. Every `when`/`otherwise` uses exact variable names from the code
-   > 6. Every `return` and `return failure` has its exact value
-   > 7. Every state field has its correct type and default
-   > 8. All annotations that affect generated output are present
+   > 2. Every `data class` / POJO / interface-with-fields is a `type` block (not `component`, not `usecase`)
+   > 3. Every `usecase` (including void, no-body ones) has a closing `end`
+   > 4. Every guard/null-check/validation is a `check` with exact condition and error details
+   > 5. Every non-trivial code line is a `step` with specific variable/method/service names
+   > 6. No step collapses two or more operations into one vague phrase
+   > 7. Every `when`/`otherwise` uses exact variable names from the code
+   > 8. Every `return` and `return failure` has its exact value
+   > 9. Every state field has its correct type and default
+   > 10. All annotations that affect generated output are present
    >
    > Return only the complete updated `.logi` file — no prose, no markdown fences, no explanation.
 
@@ -448,7 +464,9 @@ Both forms are tried automatically.
    > **Mapping rules — apply ALL of these with maximum specificity:**
    >
    > - **Choose the correct top-level keyword**: `type`, `failure`, `usecase`, `component` (class with methods), `widget`, `screen`
-   > - A **class with multiple methods** → `component <snake_name>` block with one `usecase` per method. Do NOT write flat top-level `usecase` blocks for class methods.
+   > - A **Kotlin `data class`, Java POJO/record, or TypeScript interface with only fields** → `type <snake_name>` block. These are NOT `component` — they have no methods. Every constructor parameter / field maps to a field line inside the `type` block.
+   > - A **class with multiple methods (service, repository, converter, etc.)** → `component <snake_name>` block with one `usecase` per method. Do NOT write flat top-level `usecase` blocks for class methods.
+   > - **Every `usecase` block MUST end with `end`** — even if the body is empty (e.g. a void method with no steps). Never emit a bare `usecase` line without a closing `end`.
    >
    > **`step` granularity — this is the most important rule:**
    > - Every non-trivial line or logical operation in the implementation body must become its own `step`
@@ -468,11 +486,13 @@ Both forms are tried automatically.
    >
    > **Before writing, verify mentally — reject if any answer is no:**
    > 1. Every function/method → `usecase` inside `component`, or standalone `usecase`
-   > 2. Every guard/null-check → `check` with exact condition and error values
-   > 3. Every non-trivial code line → `step` with specific variable/method/service names
-   > 4. No step collapses two or more operations
-   > 5. Every `return` and `return failure` is exact
-   > 6. All translation-relevant annotations present
+   > 2. Every `data class` / POJO / interface-with-fields → `type` block (not `component`, not `usecase`)
+   > 3. Every `usecase` (including void, no-body ones) has a closing `end`
+   > 4. Every guard/null-check → `check` with exact condition and error values
+   > 5. Every non-trivial code line → `step` with specific variable/method/service names
+   > 6. No step collapses two or more operations
+   > 7. Every `return` and `return failure` is exact
+   > 8. All translation-relevant annotations present
    >
    > Return only the Logi declaration — no prose, no markdown fences, no explanation.
 
@@ -500,6 +520,28 @@ Both forms are tried automatically.
 
 ---
 
+## Translation Plugin System
+
+`build-context` automatically merges translation rules from three layers, in priority order (lowest → highest):
+
+| Layer | File | Scope |
+|---|---|---|
+| 1. Language plugin | `.agents/skills/logi/plugins/<language>.md` | Shared Logi→language type/construct mappings |
+| 2. Framework plugin | `.agents/skills/logi/plugins/<framework>.md` | Framework-specific patterns on top of the language |
+| 3. Project overrides | `<moduleDir>/logi.md` | Project-specific conventions, file layout, examples |
+
+**Available plugins**: `kotlin.md`, `java.md`, `typescript.md`, `spring.md`, `react.md`
+
+The merged `translationRules` string in `build_context.json` already concatenates all three layers — no manual loading needed.
+
+**`logi.md` is now project-specific only.** You do NOT need to repeat general Kotlin/Spring/TypeScript rules in `logi.md`. Only add:
+- **File organization**: where generated files go, naming conventions
+- **Project patterns**: path aliases, shared utilities, coding style
+- **Do-not list**: things specific to this codebase
+- **Examples**: representative code snippets from the project
+
+---
+
 ## `init` Command
 
 Run:
@@ -514,7 +556,7 @@ This creates:
 Then tell the user:
 > Files created. Next steps:
 > 1. Edit `project.logi.jsonc` — set language, framework, source dir, output dir
-> 2. Edit `logi.md` — define translation rules (file organization, naming, patterns)
+> 2. Edit `logi.md` — add project-specific file layout, naming conventions, and code examples (language/framework rules are loaded automatically from built-in plugins)
 > 3. Add `.logi` files to your contracts dir
 > 4. Run `/logi build`
 

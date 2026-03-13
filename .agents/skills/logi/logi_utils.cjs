@@ -439,10 +439,32 @@ function findReferencedTypeBlocks(declText, allDecls) {
 // declaration texts, referenced types, paired logid blocks, existing outputs.
 // ---------------------------------------------------------------------------
 
+function loadTranslationRules(baseDir, cfg) {
+  const pluginsDir = path.join(__dirname, 'plugins');
+  const parts = [];
+
+  // Language plugin (e.g. kotlin.md, typescript.md, java.md)
+  if (cfg.language) {
+    const langPlugin = path.join(pluginsDir, `${cfg.language.toLowerCase()}.md`);
+    if (fs.existsSync(langPlugin)) parts.push(fs.readFileSync(langPlugin, 'utf8'));
+  }
+
+  // Framework plugin (e.g. spring.md, react.md)
+  if (cfg.framework) {
+    const fwPlugin = path.join(pluginsDir, `${cfg.framework.toLowerCase()}.md`);
+    if (fs.existsSync(fwPlugin)) parts.push(fs.readFileSync(fwPlugin, 'utf8'));
+  }
+
+  // Project-specific overrides (logi.md in module dir) — loaded last, highest priority
+  const rulesPath = path.join(baseDir, 'logi.md');
+  if (fs.existsSync(rulesPath)) parts.push(fs.readFileSync(rulesPath, 'utf8'));
+
+  return parts.join('\n\n---\n\n');
+}
+
 function buildContext(baseDir) {
   const cfg = loadProjectConfig(baseDir);
-  const rulesPath = path.join(baseDir, 'logi.md');
-  const translationRules = fs.existsSync(rulesPath) ? fs.readFileSync(rulesPath, 'utf8') : '';
+  const translationRules = loadTranslationRules(baseDir, cfg);
   const hashes = loadHashes(baseDir);
   const diff = getDiff(baseDir);
 
@@ -541,60 +563,43 @@ const PROJECT_CONFIG_TEMPLATE = `{
 }
 `;
 
-const LOGI_MD_TEMPLATE = `# Logi Translation Rules
-
-## Target Stack
-<!-- e.g. TypeScript 5, React 18, Vite, TailwindCSS -->
+const LOGI_MD_TEMPLATE = `# Logi Translation Rules (Project-Specific)
+#
+# Language and framework rules are loaded automatically from built-in plugins:
+#   .agents/skills/logi/plugins/<language>.md   ← e.g. kotlin.md, typescript.md
+#   .agents/skills/logi/plugins/<framework>.md  ← e.g. spring.md, react.md
+#
+# Add ONLY project-specific content here. Do not duplicate general language/framework rules.
 
 ## File Organization
 <!--
-Describe what files to generate per Logi construct, e.g.:
-- type / failure  → src/generated/types/<Name>.ts
-- usecase         → src/generated/usecases/<Name>.ts
-- widget / screen → src/generated/components/<Name>.tsx
-- flow            → src/generated/router/index.ts
+Describe where to generate files per Logi construct, e.g.:
+- type / failure  → src/main/kotlin/com/example/model/<Name>.kt
+- component       → src/main/kotlin/com/example/service/<Name>Service.kt
+                    + src/main/kotlin/com/example/controller/<Name>Controller.kt
+- usecase         → src/main/kotlin/com/example/service/<Name>.kt
 -->
 
-## Coding Conventions
+## Project Conventions
 <!--
-- Naming: PascalCase for components, camelCase for functions/vars
-- File naming: match declaration name exactly
-- Imports: use @/ path aliases
-- Always use async/await, never raw Promises
--->
-
-## Per-Construct Rules
-<!--
-type       → TypeScript interface (readonly fields, no class)
-failure    → TypeScript class extending Error with typed fields
-component  → TypeScript class with methods (one method per usecase inside the component)
-usecase    → async function exported from a service module; validate inputs first
-#
-# Line continuation: a step that is too long can be broken with a trailing \
-# The continuation line is indented one extra level and is part of the same step.
-# Example:
-#   step deserialize {db_data} from JSON to list of {attachment} \
-#     using {object_mapper}.readValue with type reference list<attachment>
-widget     → React functional component accepting Props interface; use Tailwind for styling
-screen     → React page component registered in the router
-flow       → React Router v6 routes object
-job        → async function invoked by a scheduler/queue
+- Path aliases or import prefixes specific to this project
+- Specific base classes/interfaces to extend (e.g. BaseEntity, BaseController)
+- Shared utilities (e.g. ObjectMapperProvider.get(), AuthContext.current())
+- Error handling pattern (e.g. GlobalExceptionHandler already exists — don't generate one)
 -->
 
 ## Patterns & Examples
 <!--
-Paste representative existing code here so the LLM matches the project's style.
-The more examples, the more consistent the output.
+Paste representative existing code from THIS project so the LLM matches its exact style.
+The more concrete examples, the more consistent the output.
 -->
 
 ## Do-Not List
 <!--
-- Do not use class components
-- Do not use any (use unknown and narrow)
-- Do not import from relative paths outside src/
-- Do not generate CSS modules — use Tailwind only
+- Project-specific things to avoid (e.g. do not use Lombok, do not use field injection)
 -->
 `;
+
 
 function initWorkspace(baseDir) {
   const cfgPath   = path.join(baseDir, 'project.logi.jsonc');
