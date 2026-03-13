@@ -1,0 +1,9 @@
+{
+  // Logi workspace configuration
+  // See: https://github.com/ayeminoosc/cdd/.agents/skills/logi/SETUP.md
+
+  "language": "typescript",    // e.g. typescript, java, python, swift, kotlin
+  "framework": "react",        // e.g. react, vue, next, spring, fastapi
+  "source": "contracts",       // dir containing .logi and .logid files (relative to this file)
+  "output": "src/generated"    // dir where generated code will be written (relative to this file)
+}

@@ -288,3 +288,67 @@ rm .cdd/hashes.csv
 - `/cdd build` can be integrated into CI/CD pipelines
 - Contract changes automatically generate new implementation requirements
 - Hash tracking ensures only changed contracts require attention
+
+---
+
+## Logi Skill
+
+Logi is the next-generation DSL system alongside CDD. It uses `.logi` (logic/behavior) and `.logid` (visual design) files, translated by an LLM into idiomatic code with **declaration-level change detection** — only changed blocks are sent to the LLM.
+
+### Skill Location
+`.agents/skills/logi/SKILL.md` — loaded by OpenCode, GitHub Copilot, and Claude Code
+
+### Install / Update
+```bash
+# Project-local install
+curl -fsSL https://raw.githubusercontent.com/ayeminoosc/cdd/main/.agents/skills/logi/install.sh | bash
+
+# Global install
+curl -fsSL https://raw.githubusercontent.com/ayeminoosc/cdd/main/.agents/skills/logi/install.sh | bash -s -- --global
+```
+
+### Commands
+```bash
+# Root workspace
+/logi build              # translate changed .logi files
+/logi status             # show change report
+/logi reverse            # sync .logi from manually edited output code
+/logi init               # scaffold root workspace
+
+# Module workspace
+/logi frontend build
+/logi frontend status
+/logi frontend reverse src/generated/auth/AuthService.ts
+/logi frontend init
+```
+
+### Per-Module Layout
+Each module (or root) is a self-contained Logi workspace:
+```
+<module>/
+  project.logi.jsonc     # language, framework, source dir, output dir
+  logi.md                # translation rules for this module
+  .logi/hashes.json      # declaration-level change tracking (commit this)
+  contracts/             # .logi and .logid source files
+```
+
+### Key Files
+- `.agents/skills/logi/logi_utils.cjs` — CLI utility for hashing/diff/init
+- `.agents/skills/logi/SETUP.md` — full setup guide
+- `specs/logi.md` — full Logi DSL spec
+- `specs/logidesign.md` — full LogiDesign (.logid) spec
+- `test/test.logi` — example Logi file
+- `test/test.logid` — example LogiDesign file
+
+### Debug
+```bash
+# Check status of root workspace
+node .agents/skills/logi/logi_utils.cjs status
+
+# Check status of a module
+node .agents/skills/logi/logi_utils.cjs status frontend
+
+# Reset hashes (re-translate everything)
+rm .logi/hashes.json
+rm frontend/.logi/hashes.json
+```
