@@ -27,6 +27,16 @@ The input will be one of:
 - `<module> status` → `baseDir = ./<module>/`
 - `<module> reverse [outputFile]` → `baseDir = ./<module>/`
 - `<module> init` → `baseDir = ./<module>/`
+- `<parent>:<sub> build` → `baseDir = ./<parent>/<sub>/`  ← colon-path for nested sub-projects
+- `<parent>:<sub> status` etc.
+
+**Colon-path notation** (`parent:sub`) lets you target a sub-project from the repo root without `cd`-ing first:
+```
+/logi apps:auth build
+/logi services:payments status
+/logi frontend:dashboard reverse LoginPage.tsx
+```
+The colon is converted to a path separator — `apps:auth` → `./apps/auth/`. Any depth works: `a:b:c` → `./a/b/c/`.
 
 Extract `baseDir` first. All subsequent paths are relative to `baseDir` unless stated otherwise.
 

@@ -22,10 +22,12 @@ function stripJsonComments(text) {
 
 function resolveBaseDir(moduleArg) {
   if (!moduleArg) return process.cwd();
-  // Support both absolute and relative
-  return path.isAbsolute(moduleArg)
-    ? moduleArg
-    : path.resolve(process.cwd(), moduleArg);
+  // Support colon-separated nested paths: "parent:sub" → "parent/sub"
+  // This lets you target /parent/sub from the root: /logi parent:sub build
+  const normalized = moduleArg.replace(/:/g, '/');
+  return path.isAbsolute(normalized)
+    ? normalized
+    : path.resolve(process.cwd(), normalized);
 }
 
 // ---------------------------------------------------------------------------
@@ -651,12 +653,14 @@ function main() {
   let rest = args.slice(1);
 
   if (rest.length && !rest[0].includes('.') && !path.isAbsolute(rest[0]) && rest[0] !== '--') {
-    const candidate = path.resolve(process.cwd(), rest[0]);
+    // Convert colon-path "parent:sub" → "parent/sub" before resolving
+    const normalizedCandidate = rest[0].replace(/:/g, '/');
+    const candidate = path.resolve(process.cwd(), normalizedCandidate);
     const isInit = cmd === 'init';
     // For init: accept any non-flag arg as module even if dir doesn't exist yet
     // For others: only accept if directory already exists
     if (isInit || (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory())) {
-      moduleArg = rest[0];
+      moduleArg = rest[0];  // keep original (resolveBaseDir normalizes it)
       rest = rest.slice(1);
     }
   }

@@ -1137,6 +1137,59 @@ describe('resolveBaseDir', () => {
     const result = resolveBaseDir('frontend');
     assertEqual(result, path.resolve(process.cwd(), 'frontend'));
   });
+
+  test('colon-path: parent:sub → ./parent/sub', () => {
+    const result = resolveBaseDir('parent:sub');
+    assertEqual(result, path.resolve(process.cwd(), 'parent/sub'));
+  });
+
+  test('colon-path: three levels a:b:c → ./a/b/c', () => {
+    const result = resolveBaseDir('a:b:c');
+    assertEqual(result, path.resolve(process.cwd(), 'a/b/c'));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('colon-path CLI — parent:sub module arg', () => {
+  const { execSync } = require('child_process');
+  const UTILS_PATH = path.resolve(__dirname, '../logi_utils.cjs');
+
+  test('init with colon-path creates workspace in nested directory', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'logi-colon-'));
+    try {
+      // Run from root with "parent:sub init" — should create root/parent/sub workspace
+      execSync(
+        `node "${UTILS_PATH}" init parent:sub`,
+        { encoding: 'utf8', cwd: root }
+      );
+      assert(fs.existsSync(path.join(root, 'parent', 'sub', 'project.logi.jsonc')), 'project.logi.jsonc should exist at parent/sub');
+      assert(fs.existsSync(path.join(root, 'parent', 'sub', 'logi.md')), 'logi.md should exist at parent/sub');
+      assert(fs.existsSync(path.join(root, 'parent', 'sub', '.logi', 'hashes.json')), 'hashes.json should exist at parent/sub');
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  test('status with colon-path reads from correct nested directory', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'logi-colon2-'));
+    try {
+      // Set up a workspace at root/apps/auth manually
+      const subDir = path.join(root, 'apps', 'auth');
+      fs.mkdirSync(path.join(subDir, '.logi'), { recursive: true });
+      fs.mkdirSync(path.join(subDir, 'contracts'), { recursive: true });
+      const cfg = { language: 'typescript', framework: 'react', source: 'contracts', output: 'src/generated' };
+      fs.writeFileSync(path.join(subDir, 'project.logi.jsonc'), JSON.stringify(cfg), 'utf8');
+      fs.writeFileSync(path.join(subDir, 'logi.md'), '# Rules\n', 'utf8');
+      fs.writeFileSync(path.join(subDir, '.logi', 'hashes.json'), '{}', 'utf8');
+
+      // Run status from root using colon-path
+      const out = execSync(
+        `node "${UTILS_PATH}" status apps:auth`,
+        { encoding: 'utf8', cwd: root }
+      );
+      assertIncludes(out, 'Logi Status');
+      assertIncludes(out, 'apps/auth');
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
