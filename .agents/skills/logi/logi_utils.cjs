@@ -74,11 +74,12 @@ function saveHashes(baseDir, data) {
 // module   → single-line namespace label (no 'end'), recorded as "module.<name>"
 // Blocks (closed by 'end'):
 //   type  failure  usecase  widget  screen  flow  job  system_event
+//   component  (contains usecase sub-blocks)
 // Enum types:  type name = a | b | c  (single line, no 'end')
 // ---------------------------------------------------------------------------
 
 const BLOCK_KEYWORDS = new Set([
-  'type', 'failure', 'usecase', 'widget', 'screen', 'flow', 'job'
+  'type', 'failure', 'usecase', 'widget', 'screen', 'flow', 'job', 'component'
 ]);
 
 // Keywords that are single-line declarations (no 'end' block)
@@ -151,7 +152,7 @@ function parseLogiDeclarations(content) {
           currentName = null;
           blockLines = [];
         }
-      } else if (NESTED_BLOCK_KEYWORDS.has(trimmed.split(/\s/)[0])) {
+      } else if (NESTED_BLOCK_KEYWORDS.has(trimmed.split(/\s/)[0]) || BLOCK_KEYWORDS.has(trimmed.split(/\s/)[0])) {
         depth++;
       }
     }
@@ -566,6 +567,7 @@ Describe what files to generate per Logi construct, e.g.:
 <!--
 type       → TypeScript interface (readonly fields, no class)
 failure    → TypeScript class extending Error with typed fields
+component  → TypeScript class with methods (one method per usecase inside the component)
 usecase    → async function exported from a service module; validate inputs first
 widget     → React functional component accepting Props interface; use Tailwind for styling
 screen     → React page component registered in the router

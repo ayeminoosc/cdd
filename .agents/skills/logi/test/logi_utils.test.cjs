@@ -401,6 +401,89 @@ end
     assert('usecase.complex' in d);
     assertIncludes(d['usecase.complex'], 'step done');
   });
+
+  test('parses component block', () => {
+    const src = `component attachment_converter\n  usecase convert_to_db for a: text returns text\n    step serialize\n  end\nend\n`;
+    const d = parseLogiDeclarations(src);
+    assert('component.attachment_converter' in d, 'should find component');
+    assertIncludes(d['component.attachment_converter'], 'usecase convert_to_db');
+  });
+
+  test('component with multiple usecases inside', () => {
+    const src = `component attachment_converter
+  usecase to_db for a: text returns text
+    step serialize
+  end
+
+  usecase from_db for s: text returns text
+    step deserialize
+  end
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('component.attachment_converter' in d);
+    assertIncludes(d['component.attachment_converter'], 'usecase to_db');
+    assertIncludes(d['component.attachment_converter'], 'usecase from_db');
+    assertIncludes(d['component.attachment_converter'], 'step deserialize');
+  });
+
+  test('multiple component blocks in one file', () => {
+    const src = `component service_a
+  usecase do_a for x: text returns text
+    step a
+  end
+end
+component service_b
+  usecase do_b for y: text returns text
+    step b
+  end
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('component.service_a' in d);
+    assert('component.service_b' in d);
+    assertIncludes(d['component.service_a'], 'step a');
+    assertIncludes(d['component.service_b'], 'step b');
+  });
+
+  test('component with annotation is parsed correctly', () => {
+    const src = `@converter\ncomponent attachment_converter\n  usecase to_db for a: text returns text\n    step serialize\n  end\nend\n`;
+    const d = parseLogiDeclarations(src);
+    assert('component.attachment_converter' in d, 'annotation should not break parsing');
+    assertIncludes(d['component.attachment_converter'], 'step serialize');
+  });
+
+  test('usecase inside component with nested when does not break depth', () => {
+    const src = `component processor
+  usecase process for x: text returns text
+    when x exists
+      step handle
+    end
+    return x
+  end
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('component.processor' in d);
+    assertIncludes(d['component.processor'], 'return x');
+  });
+
+  test('mix of component and standalone usecase in same file', () => {
+    const src = `usecase standalone for x: text returns text
+  step a
+end
+component grouped
+  usecase grouped_op for y: text returns text
+    step b
+  end
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('usecase.standalone' in d);
+    assert('component.grouped' in d);
+    assertIncludes(d['usecase.standalone'], 'step a');
+    assertIncludes(d['component.grouped'], 'step b');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

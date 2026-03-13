@@ -117,7 +117,14 @@ Process each entry in `context.items`. The `translationRules` and `config` field
 **`mode: "added"` — new file, generate everything:**
 - `logiContent`: the full `.logi` source — read and understand all declarations
 - `logidContent`: the full `.logid` source if present (design tokens, styles, variants, themes, motions)
-- Use `logi.md` File Organization rules to decide which output files to create and where inside `config.output`
+- **Package / directory mirroring**: the subdirectory path of the `.logi` file under `config.source` must be mirrored under `config.output` for all generated files.
+  - Example: `contracts/com/example/auth/memory.logi` → all outputs go inside `<output>/com/example/auth/`
+  - Example: `contracts/auth/auth_service.logi` → all outputs go inside `<output>/auth/`
+  - Example: `contracts/auth_service.logi` (no subdir) → outputs go directly in `<output>/`
+  - **Algorithm**: strip `config.source` prefix from the `.logi` file path, strip the filename, use the remaining directory segment as the subdir under `config.output`.
+- For **Java/Kotlin**: the `module` declaration name in the `.logi` file is the package name (e.g. `module com.example.auth` → `package com.example.auth;`). Use it as-is in the generated file.
+- For **TypeScript/JavaScript**: use the subdirectory path as the module/namespace grouping. Do not invent a flat output location.
+- Use `logi.md` File Organization rules for filename conventions within the resolved subdirectory.
 - Generate all output files. Write each to disk.
 - Run: `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile> <out1> [out2...]`
 
@@ -240,8 +247,32 @@ usecase convert_db_to_attachment for db_data: text? returns attachment[]?
 end
 ```
 
-**2. No nesting of declarations inside declarations.**
-Every `type`, `failure`, `usecase`, `widget`, `screen`, `flow`, `job` is a **flat top-level block**. One class with multiple methods → multiple separate `usecase` blocks at the top level. Never wrap multiple usecases inside another usecase or type.
+**2. `component` is the ONLY construct that may contain other declarations.**
+A `component` is a top-level block that groups `usecase` sub-blocks — used when a source class has multiple methods. Every other construct (`type`, `failure`, `widget`, `screen`, `flow`, `job`) is a **flat top-level block** with no nesting. Never wrap multiple usecases inside a `usecase` or `type`. Never put `type` or `failure` inside a `component`.
+
+```
+# WRONG — class methods flattened to top-level usecases:
+usecase convert_to_database_column for attachments: attachment[]? returns text?
+  step serialize
+end
+usecase convert_to_entity_attribute for db_data: text? returns attachment[]?
+  step deserialize
+end
+
+# CORRECT — class → component containing usecases:
+@converter
+component attachment_converter
+  usecase convert_to_database_column for attachments: attachment[]? returns text?
+    step serialize {attachments} to JSON string using object mapper
+    return the JSON string
+  end
+
+  usecase convert_to_entity_attribute for db_data: text? returns attachment[]?
+    step deserialize {db_data} from JSON to list of attachment using object mapper
+    return the deserialized list
+  end
+end
+```
 
 **3. Annotations go BEFORE the declaration keyword, on their own lines — never inside the block body.**
 
@@ -267,7 +298,7 @@ end
 - **Declaration-level annotations** (`@entity`, `@table`, `@endpoint`, `@route`, `@requires_auth`, `@render`, `@test_id`, etc.) → go on the line(s) **immediately before** the opening keyword (`type`, `usecase`, `widget`, `screen`), outside the block.
 - **Field-level annotations** (`@id`, `@unique`, `@index`, `@generated`, `@default`, `@relation`) → go on the line **immediately before the field** they annotate, indented inside the block.
 
-**4. `usecase` body contains only Logi body primitives.** Valid: `check`, `when`, `each`, `repeat`, `step`, `return`, `call`, comments (`#`). If the source is a class, the class name does not become a wrapping usecase — map each method to its own top-level `usecase`.
+**4. `usecase` body contains only Logi body primitives.** Valid: `check`, `when`, `each`, `repeat`, `step`, `return`, `call`, comments (`#`). If the source is a class with methods, map the class to a `component` block containing one `usecase` per method — never make the class name a wrapping `usecase`, and never flatten class methods to standalone top-level `usecase` blocks.
 
 **5. No implementation-language syntax inside `.logi`.** No `if`, `for`, `try`, `throw`, semicolons, type casts, generics (`List<Attachment>`), or language keywords. Use only Logi primitives.
 
@@ -312,6 +343,9 @@ Both forms are tried automatically.
    > **Reverse engineering task — round-trip fidelity required**
    >
    > **Goal**: The `.logi` you produce must be precise enough that running `/logi build` on it would reproduce **functionally identical output code** to what is shown below. This is not a summary — it is a complete, accurate specification of the implementation.
+   >
+   > **Source `.logi` file**: `<logiFileRelPath>` (under `<config.source>/<packagePath>/`)
+   > **Package / module**: `<module_declaration>` (e.g. `module com.example.auth` — preserve this exactly)
    >
    > **Current `.logi` source** (`<file>`):
    > ```logi
@@ -384,6 +418,12 @@ Both forms are tried automatically.
    > <translationRules>
    > ```
    >
+   > **Package / module:**
+   > - Target `.logi` file path: `<config.source>/<packagePath>/<snake_case_name>.logi`
+   > - Package path: `<packagePath>` (derived from the output file path relative to `config.output`, dropping the filename)
+   > - If this is a new `.logi` file, the first line must be: `module <packagePath_with_dots>`
+   > - For Java/Kotlin: the module name is the Java package declaration verbatim. For TypeScript: the module name is the directory path with `/` replaced by `.`.
+   >
    > **Mapping rules — apply ALL of these systematically:**
    >
    > - Choose the correct top-level keyword: `type`, `failure`, `usecase`, `widget`, `screen`
@@ -403,7 +443,19 @@ Both forms are tried automatically.
    >
    > Return only the Logi declaration block — no prose, no markdown fences, no explanation.
 
-4. Ask user: **which `.logi` contract file** should this declaration be appended to? (list existing `.logi` files as options, or allow specifying a new file path)
+3. **Automatically derive the target `.logi` file path** — do NOT ask the user where to put it unless ambiguous:
+   - Compute `packagePath` = path of the output file **relative to `config.output`**, then drop the filename.
+     - e.g. output: `src/main/java/com/example/auth/Memory.java`, `config.output`: `src/main/java` → `packagePath` = `com/example/auth`
+     - e.g. output: `src/generated/auth/AuthService.ts`, `config.output`: `src/generated` → `packagePath` = `auth`
+   - Target `.logi` file = `<config.source>/<packagePath>/<snake_case_filename>.logi`
+     - e.g. → `contracts/com/example/auth/memory.logi`
+     - e.g. → `contracts/auth/auth_service.logi`
+   - If a `.logi` file already exists at that path, append the new declaration to it.
+   - If it is a new path, create the file (and intermediate directories). Add a `module <packagePath_with_dots>` line at the top.
+     - e.g. `packagePath` = `com/example/auth` → `module com.example.auth`
+     - e.g. `packagePath` = `auth` → `module auth`
+     - e.g. no subdir → omit the module line
+   - Only ask the user if multiple `.logi` files already exist in that directory and the correct grouping is genuinely ambiguous.
 5. Collect proposed new declaration
 
 ### After processing all files:
@@ -544,6 +596,30 @@ end
 ```
 Common annotations: `@endpoint(method: "post", path: "/...")`, `@public`, `@requires_auth`, `@role("name")`, `@idempotent`, `@job_handler`, `@description("...")`
 
+#### `component`
+Groups related `usecase` blocks into a single class or service. Use when a source class has multiple methods.
+```
+@<annotation>
+component <name>
+  usecase <name> for <inputs> returns <return_type>
+    step ...
+    return ...
+  end
+
+  usecase <name> for <inputs> returns <return_type>
+    step ...
+    return ...
+  end
+end
+```
+**Rules:**
+- Each `usecase` inside a `component` gets its own `end`; the `component` also closes with `end`
+- Multiple `component` blocks are allowed in one `.logi` file
+- `usecase` inside a `component` is indented one level deeper
+- Do NOT write standalone `usecase` blocks for methods that belong to a class — use `component`
+
+Common annotations: `@converter`, `@service`, `@repository`, `@controller`, `@component`
+
 #### `widget`
 Reusable UI component with props and events.
 ```
@@ -647,6 +723,7 @@ system_event <name>(<inputs>)
 |---|---|---|---|
 | `type` | class / schema / DTO | interface / type | data class / model |
 | `failure` | error class / exception | error type | error model |
+| `component` | class / service with methods | class / service with methods | class / service with methods |
 | `usecase` | service method / handler | mutation / query wrapper | ViewModel operation |
 | `widget` | — | reusable UI component | reusable view component |
 | `screen` | — | page / route component | screen / view |
