@@ -142,20 +142,27 @@ Display the human-readable portion of the output (everything before `__JSON__`).
 
 ## `reverse` Command
 
-**Purpose**: When output code was manually edited, update the `.logi` source to match.
+**Purpose**: Make `.logi` files reflect actual code — handles both drift (tracked file changed) and untracked code (new file with no `.logi` source).
+
+Two detection modes run in one pass:
+- **Drift mode**: output file is in `hashes.json` but its content hash changed → update existing `.logi` declaration
+- **Onboard mode**: output file is NOT in `hashes.json` → new code with no Logi source → generate new `.logi` block and register it
 
 ### With specific output file:
 ```
 /logi [module] reverse src/generated/auth/AuthService.ts
 ```
 1. Run: `node .agents/skills/logi/logi_utils.cjs reverse-lookup [module] src/generated/auth/AuthService.ts`
-2. This returns the source `.logi` file path
+2. **If found in hashes** → drift mode: proceed to sync
+3. **If not found in hashes** → onboard mode: proceed to generate new declaration
 
-### Without argument (reverse all drifted in workspace):
-1. Run: `node .agents/skills/logi/logi_utils.cjs status [module]` — get `drifted` list
-2. Process each drifted file
+### Without argument (scan everything):
+1. Run: `node .agents/skills/logi/logi_utils.cjs status [module]` → get `drifted` list
+2. Scan the `output` directory (from `project.logi.jsonc`) for any code files **not** tracked in `hashes.json` → collect as `untracked` list
+3. Process all drifted + untracked files in one pass
+4. Show combined diff/preview; ask for a **single confirmation** before writing anything
 
-### For each source `.logi` to reverse:
+### For each drifted file (tracked, code changed):
 1. Read current content of each output file in its `outputs` map
 2. Read current `.logi` source content
 3. Send to LLM:
@@ -170,10 +177,27 @@ Display the human-readable portion of the output (everything before `__JSON__`).
    > ```
    > Task: Produce an updated `.logi` file that accurately reflects what the implementation code actually does. Preserve Logi DSL structure and keywords. Fix declarations to match the implementation. Do not invent Logi syntax — use only valid Logi keywords.
 
-4. Show the diff between old `.logi` and proposed new `.logi`
-5. **Wait for user confirmation** before writing
-6. Write updated `.logi` file
-7. Run: `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile>` (no output files — keeps output map unchanged, updates source declaration hashes)
+4. Collect proposed updated `.logi` content
+
+### For each untracked file (new code, no `.logi` source):
+1. Read the code file content
+2. Send to LLM:
+
+   > **New implementation file** (`<outputFile>`):
+   > ```<language>
+   > <content>
+   > ```
+   > Task: Generate a new Logi declaration block that accurately represents this code. Use the correct Logi keyword (`type`, `usecase`, `screen`, `widget`, etc.). Use only valid Logi DSL syntax from the spec.
+
+3. Ask user: **which `.logi` contract file** should this declaration be appended to? (list existing `.logi` files as options, or allow specifying a new file path)
+4. Collect proposed new declaration
+
+### After processing all files:
+1. Show **combined diff** — all drifted updates + all new declarations to be appended
+2. **Wait for user confirmation** before writing anything
+3. Write all updated `.logi` files
+4. For drifted: run `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile>` (keeps output map unchanged, updates source hashes)
+5. For untracked: run `node .agents/skills/logi/logi_utils.cjs hash [module] <logiFile> <outputFile>` (registers new mapping in hashes)
 
 ---
 
