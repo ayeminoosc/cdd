@@ -322,6 +322,198 @@ function reverseMapOutputFile(baseDir, outputFileRel) {
 }
 
 // ---------------------------------------------------------------------------
+// LogiD block extractor
+// Extracts top-level blocks from a .logid file:
+//   tokens, style, variant, theme, motion  → { keyword, name, text }[]
+// ---------------------------------------------------------------------------
+
+const LOGID_TOP_KEYWORDS = new Set(['tokens', 'style', 'variant', 'theme', 'motion']);
+const LOGID_NESTED_OPENERS = new Set(['hover', 'active', 'focus', 'disabled', 'selected', 'loading', 'error']);
+
+function extractTopLevelLogidBlocks(content) {
+  const blocks = [];
+  const lines = content.split('\n');
+  let depth = 0;
+  let current = null;
+  let blockLines = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#')) {
+      if (current) blockLines.push(line);
+      continue;
+    }
+
+    if (depth === 0) {
+      const parts = trimmed.split(/\s+/);
+      if (!parts[0] || !LOGID_TOP_KEYWORDS.has(parts[0])) continue;
+      current = { keyword: parts[0], name: parts.slice(1).join(' ') };
+      blockLines = [line];
+      depth = 1;
+    } else {
+      blockLines.push(line);
+      if (trimmed === 'end') {
+        depth--;
+        if (depth === 0 && current) {
+          blocks.push({ ...current, text: blockLines.join('\n') });
+          current = null;
+          blockLines = [];
+        }
+      } else {
+        const firstWord = trimmed.split(/\s/)[0];
+        // Sub-block openers increase depth
+        if (LOGID_NESTED_OPENERS.has(firstWord) ||
+            trimmed.startsWith('on mobile') ||
+            trimmed.startsWith('on tablet') ||
+            trimmed.startsWith('on desktop') ||
+            (trimmed.startsWith('.') && !trimmed.includes(':'))) {
+          depth++;
+        }
+      }
+    }
+  }
+  return blocks;
+}
+
+/**
+ * Returns the relevant logid blocks (tokens + style + variants + themes + motions)
+ * for a given declaration name from the paired .logid file.
+ * declName is like "widget.login_form" — we use the short name for matching.
+ */
+function getLogidContextForDecl(baseDir, logiFileRel, declName) {
+  const logidPath = path.join(baseDir, logiFileRel.replace(/\.logi$/, '.logid'));
+  if (!fs.existsSync(logidPath)) return null;
+  const content = fs.readFileSync(logidPath, 'utf8');
+  const allBlocks = extractTopLevelLogidBlocks(content);
+  const shortName = declName.includes('.') ? declName.split('.').slice(1).join('.') : declName;
+
+  const relevant = allBlocks
+    .filter(b =>
+      b.keyword === 'tokens' ||
+      (b.keyword === 'style' && b.name === shortName) ||
+      (b.keyword === 'variant' && b.name.startsWith(shortName + ' ')) ||
+      b.keyword === 'theme' ||
+      b.keyword === 'motion'
+    )
+    .map(b => b.text);
+
+  return relevant.length ? relevant.join('\n\n') : null;
+}
+
+// ---------------------------------------------------------------------------
+// Referenced type/failure finder
+// For a declaration block text, returns subset of allDecls that are type/failure
+// declarations whose name appears in the text.
+// ---------------------------------------------------------------------------
+
+function findReferencedTypeBlocks(declText, allDecls) {
+  const result = {};
+  for (const [key, blockText] of Object.entries(allDecls)) {
+    if (!key.startsWith('type.') && !key.startsWith('failure.')) continue;
+    const name = key.split('.').slice(1).join('.');
+    const regex = new RegExp(`\\b${name}\\b`);
+    if (regex.test(declText)) {
+      result[key] = blockText;
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Build context generator
+// Produces .logi/build_context.json — the single JSON file the agent reads
+// before translating. Contains everything the LLM needs: config, rules, diffs,
+// declaration texts, referenced types, paired logid blocks, existing outputs.
+// ---------------------------------------------------------------------------
+
+function buildContext(baseDir) {
+  const cfg = loadProjectConfig(baseDir);
+  const rulesPath = path.join(baseDir, 'logi.md');
+  const translationRules = fs.existsSync(rulesPath) ? fs.readFileSync(rulesPath, 'utf8') : '';
+  const hashes = loadHashes(baseDir);
+  const diff = getDiff(baseDir);
+
+  // Helper: read all current output file contents for a source logi file
+  function getExistingOutputs(logiFileRel) {
+    const entry = hashes[logiFileRel];
+    if (!entry || !entry.outputs) return {};
+    const outputs = {};
+    for (const outRel of Object.keys(entry.outputs)) {
+      const absOut = path.join(baseDir, outRel);
+      if (fs.existsSync(absOut)) {
+        outputs[outRel] = fs.readFileSync(absOut, 'utf8');
+      }
+    }
+    return outputs;
+  }
+
+  const items = [];
+  const deletedDeclarations = [];
+
+  // --- Added files: send full .logi + full .logid content ---
+  for (const fileRel of diff.added) {
+    const absLogi = path.join(baseDir, fileRel);
+    const logiContent = fs.existsSync(absLogi) ? fs.readFileSync(absLogi, 'utf8') : '';
+    const logidPath = path.join(baseDir, fileRel.replace(/\.logi$/, '.logid'));
+    const logidContent = fs.existsSync(logidPath) ? fs.readFileSync(logidPath, 'utf8') : null;
+    items.push({
+      file: fileRel,
+      mode: 'added',
+      logiContent,
+      logidContent,
+      existingOutputs: {}
+    });
+  }
+
+  // --- Modified files: declaration-level surgical items ---
+  for (const mod of diff.modified) {
+    const absLogi = path.join(baseDir, mod.file);
+    const logiContent = fs.existsSync(absLogi) ? fs.readFileSync(absLogi, 'utf8') : '';
+    const allDecls = parseLogiDeclarations(logiContent);
+    const existingOutputs = getExistingOutputs(mod.file);
+
+    for (const declName of [...mod.changedDeclarations, ...mod.newDeclarations]) {
+      const declText = allDecls[declName] || '';
+      items.push({
+        file: mod.file,
+        mode: mod.changedDeclarations.includes(declName) ? 'modified' : 'new_declaration',
+        declarationName: declName,
+        declarationText: declText,
+        referencedTypes: findReferencedTypeBlocks(declText, allDecls),
+        logidContext: getLogidContextForDecl(baseDir, mod.file, declName),
+        existingOutputs
+      });
+    }
+
+    // Collect deleted declarations separately
+    for (const declName of mod.deletedDeclarations) {
+      deletedDeclarations.push({
+        file: mod.file,
+        declarationName: declName,
+        existingOutputs
+      });
+    }
+  }
+
+  const context = {
+    baseDir,
+    config: cfg,
+    translationRules,
+    deleted: diff.deleted,
+    drifted: diff.drifted,
+    items,
+    deletedDeclarations,
+    unchanged: diff.unchanged
+  };
+
+  const outDir = path.join(baseDir, '.logi');
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, 'build_context.json');
+  fs.writeFileSync(outPath, JSON.stringify(context, null, 2) + '\n', 'utf8');
+  return outPath;
+}
+
+// ---------------------------------------------------------------------------
 // Init scaffolding
 // ---------------------------------------------------------------------------
 
@@ -506,6 +698,12 @@ function main() {
       break;
     }
 
+    case 'build-context': {
+      const outPath = buildContext(baseDir);
+      console.log(`Build context written to: ${outPath}`);
+      break;
+    }
+
     case 'init': {
       const created = initWorkspace(baseDir);
       if (created.length) {
@@ -524,7 +722,7 @@ function main() {
 
     default:
       console.error(`Unknown command: ${cmd}`);
-      console.error('Commands: status, hash, delete, reverse-lookup, init');
+      console.error('Commands: build-context, status, hash, delete, reverse-lookup, init');
       process.exit(1);
   }
 }
@@ -544,6 +742,10 @@ module.exports = {
   recordTranslation,
   removeFromHashes,
   reverseMapOutputFile,
+  extractTopLevelLogidBlocks,
+  getLogidContextForDecl,
+  findReferencedTypeBlocks,
+  buildContext,
   initWorkspace,
 };
 

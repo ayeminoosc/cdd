@@ -1,0 +1,15 @@
+{
+  "baseDir": "/home/ayeminoo/data/projects/cdd",
+  "config": {
+    "language": "typescript",
+    "framework": "react",
+    "source": "contracts",
+    "output": "src/generated"
+  },
+  "translationRules": "# Logi Translation Rules\n\n## Target Stack\n<!-- e.g. TypeScript 5, React 18, Vite, TailwindCSS -->\n\n## File Organization\n<!--\nDescribe what files to generate per Logi construct, e.g.:\n- type / failure  → src/generated/types/<Name>.ts\n- usecase         → src/generated/usecases/<Name>.ts\n- widget / screen → src/generated/components/<Name>.tsx\n- flow            → src/generated/router/index.ts\n-->\n\n## Coding Conventions\n<!--\n- Naming: PascalCase for components, camelCase for functions/vars\n- File naming: match declaration name exactly\n- Imports: use @/ path aliases\n- Always use async/await, never raw Promises\n-->\n\n## Per-Construct Rules\n<!--\ntype       → TypeScript interface (readonly fields, no class)\nfailure    → TypeScript class extending Error with typed fields\nusecase    → async function exported from a service module; validate inputs first\nwidget     → React functional component accepting Props interface; use Tailwind for styling\nscreen     → React page component registered in the router\nflow       → React Router v6 routes object\njob        → async function invoked by a scheduler/queue\n-->\n\n## Patterns & Examples\n<!--\nPaste representative existing code here so the LLM matches the project's style.\nThe more examples, the more consistent the output.\n-->\n\n## Do-Not List\n<!--\n- Do not use class components\n- Do not use any (use unknown and narrow)\n- Do not import from relative paths outside src/\n- Do not generate CSS modules — use Tailwind only\n-->\n",
+  "deleted": [],
+  "drifted": [],
+  "items": [],
+  "deletedDeclarations": [],
+  "unchanged": []
+}
