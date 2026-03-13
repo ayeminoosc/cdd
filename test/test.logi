@@ -1,23 +1,24 @@
 module auth_demo
 
-failure validation_failed
+  failure validation_failed
     field: text?
     message: text
-end
+  end
 
-usecase submit_login for email: text, password: text returns void
+  usecase submit_login for email: text, password: text returns void
     check email is not empty, otherwise fail with validation_failed with field "email" and message "Enter your email address"
     check email is in a valid email format, otherwise fail with validation_failed with field "email" and message "Enter a valid email address"
     check password is not empty, otherwise fail with validation_failed with field "password" and message "Enter your password"
     step show alert "calling backend"
     return
-end
+  end
 
-@test_id("login_form")
-@render("strict")
-@variant("immersive")
-@motion("standard")
-widget login_form
+  @test_id("login_form")
+  @render("strict")
+  @variant("immersive")
+  @motion("standard")
+
+  widget login_form
     prop email: text
     prop password: text
     prop validation_field: text?
@@ -34,27 +35,28 @@ widget login_form
 
     show input email_field label "Email address"
     when validation_field is "email"
-        show error_text email_error_text label validation_message
+      show error_text email_error_text label validation_message
     end
 
     show password_input password_field label "Password"
     when validation_field is "password"
-        show error_text password_error_text label validation_message
+      show error_text password_error_text label validation_message
     end
 
     when is_loading
-        show spinner submit_spinner
+      show spinner submit_spinner
     end
 
     show button submit_button label "Continue"
     show helper_text helper_note label "Use any password. The demo only validates the form."
-end
+  end
 
-@route("/login")
-@render("strict")
-@layout("centered_form")
-@theme("dark")
-screen login_screen
+  @route("/login")
+  @render("strict")
+  @layout("centered_form")
+  @theme("dark")
+
+  screen login_screen
     state email: text
     state password: text
     state validation_field: text?
@@ -82,10 +84,10 @@ screen login_screen
     on submit_login_action.failed -> set validation_field = submit_login_action.error.field
     on submit_login_action.failed -> set validation_message = submit_login_action.error.message
     on submit_login_action.succeeded -> set is_loading = false
-end
+  end
 
-flow auth_flow
+  flow auth_flow
     start: login_screen
-end
+  end
 
 end

@@ -4,9 +4,9 @@
 It describes how your UI looks — color, typography, spacing, layout, states, variants, motion, and theme behavior.
 
 Logi v2 (`.logi`) describes what the software is and what it does.
-LogiDesign v2 (`.logidesign`) describes how the interface should look and feel.
+LogiDesign v2 (`.logid`) describes how the interface should look and feel.
 
-File extension: `.logidesign`
+File extension: `.logid`
 
 ---
 
@@ -50,7 +50,7 @@ The translator decides:
 
 ## File Structure
 
-A `.logidesign` file contains five block types:
+A `.logid` file contains five block types:
 
 ```text
 tokens   — define the design system foundation
@@ -63,9 +63,9 @@ motion   — define reusable motion behavior
 Typical file layout:
 
 ```text
-app.logidesign         — global tokens, themes, and motion
-auth.logidesign        — widget styles for auth flows
-commerce.logidesign    — widget styles for commerce flows
+app.logid         — global tokens, themes, and motion
+auth.logid        — widget styles for auth flows
+commerce.logid    — widget styles for commerce flows
 ```
 
 LogiDesign v2 works together with Logi v2.
@@ -783,7 +783,7 @@ end
 LogiDesign v2 is not executed directly. It is translated by an LLM into platform-native styling.
 
 ```text
-LogiDesign Source (.logidesign)
+LogiDesign Source (.logid)
               ↓
          LLM Translation
               ↓

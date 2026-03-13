@@ -1,6 +1,6 @@
 # Logi Language Support
 
-Syntax highlighting and formatting support for **Logi** and **LogiDesign** languages.
+Syntax highlighting and formatting support for **Logi** and **LogiD** languages.
 
 ## Features
 
@@ -12,7 +12,7 @@ Syntax highlighting and formatting support for **Logi** and **LogiDesign** langu
   - Comments, strings, interpolation `{expression}`
   - Operators and type modifiers
 
-- **LogiDesign (`.logidesign`)**: Visual design language highlighting
+- **LogiD (`.logid`)**: Visual design language highlighting
   - Keywords: `tokens`, `style`, `theme`, `end`
   - Categories: `color`, `font`, `space`, `radius`, `shadow`, `size`
   - State blocks: `hover`, `active`, `focus`, `disabled`
@@ -25,7 +25,7 @@ Automatic code formatting with configurable options:
 
 - **Indentation**: Configurable spaces (default: 2)
 - **Blank lines**: Between top-level blocks (configurable)
-- **Colon alignment**: In token definitions (configurable for `.logidesign`)
+- **Colon alignment**: In token definitions (configurable for `.logid`)
 
 ### Language Features
 
@@ -36,7 +36,7 @@ Automatic code formatting with configurable options:
 
 ## Usage
 
-1. Create files with `.logi` or `.logidesign` extensions
+1. Create files with `.logi` or `.logid` extensions
 2. Syntax highlighting applies automatically
 3. Format with:
    - **Shift+Alt+F** (Windows/Linux)
@@ -95,9 +95,9 @@ screen order_list for user
 end
 ```
 
-### LogiDesign Example
+### LogiD Example
 
-```logidesign
+```logid
 tokens
   color
     primary:    #6366F1
@@ -138,7 +138,7 @@ end
 
 `module`, `type`, `extends`, `failure`, `behavior`, `rule`, `step`, `check`, `when`, `otherwise`, `each`, `repeat`, `until`, `return`, `end`, `screen`, `widget`, `bind`, `show`
 
-### LogiDesign Keywords
+### LogiD Keywords
 
 `tokens`, `style`, `theme`, `end`, `color`, `font`, `space`, `radius`, `shadow`, `size`, `hover`, `active`, `focus`, `disabled`, `selected`, `loading`, `error`, `on mobile`, `on tablet`, `on desktop`
 
@@ -146,7 +146,7 @@ end
 
 **Logi** is a logic-first intent language where you describe *what* your software does. An LLM translates it into real programming languages and frameworks.
 
-**LogiDesign** is the companion design language for describing visual styling with design tokens and platform-agnostic properties.
+**LogiD** is the companion design language for describing visual styling with design tokens and platform-agnostic properties.
 
 ## Development
 
@@ -171,4 +171,4 @@ MIT
 ## Links
 
 - [Logi Language Specification](../../specs/logi.md)
-- [LogiDesign Specification](../../specs/logidesign.md)
+- [LogiD Specification](../../specs/logidesign.md)

@@ -21,9 +21,9 @@
   ],
   "folding": {
     "markers": {
-      "start": "^\\s*(module|type|failure|behavior|rule|screen|widget|tokens|style|theme|when|each|repeat|hover|active|focus|disabled|selected|loading|error|on mobile|on tablet|on desktop)",
+      "start": "^\\s*(module|type|failure|usecase|screen|widget|flow|job|tokens|style|variant|theme|motion|when|each|repeat|hover|active|focus|disabled|selected|loading|error|on mobile|on tablet|on desktop|color|font|space|radius|shadow|size|border)\\b",
       "end": "^\\s*end"
     }
   },
-  "wordPattern": "[a-z_][a-z0-9_]*"
+  "wordPattern": "[a-z_][a-z0-9_]*(?:\\.[a-z_][a-z0-9_]*)*"
 }

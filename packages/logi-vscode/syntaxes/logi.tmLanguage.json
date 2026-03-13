@@ -7,10 +7,10 @@
       "include": "#comments"
     },
     {
-      "include": "#keywords"
+      "include": "#annotations"
     },
     {
-      "include": "#type-declarations"
+      "include": "#declarations"
     },
     {
       "include": "#strings"
@@ -19,13 +19,19 @@
       "include": "#numbers"
     },
     {
-      "include": "#operators"
+      "include": "#references"
+    },
+    {
+      "include": "#qualified-names"
+    },
+    {
+      "include": "#keywords"
     },
     {
       "include": "#built-in-types"
     },
     {
-      "include": "#interpolation"
+      "include": "#operators"
     }
   ],
   "repository": {
@@ -37,35 +43,37 @@
         }
       ]
     },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "meta.annotation.logi",
+          "match": "@([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "entity.name.tag.logi"
+            }
+          }
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.logi",
-          "match": "\\b(module|type|extends|failure|behavior|rule|step|check|when|otherwise|each|repeat|until|return|end|screen|widget|bind|show|for)\\b"
+          "match": "\\b(module|type|extends|failure|usecase|for|returns|check|when|otherwise|each|repeat|until|return|end|screen|state|prop|event|action|call|with|show|step|flow|route|on|set|run|go|back|job|system_event)\\b"
         },
         {
           "name": "keyword.operator.logi",
-          "match": "\\b(and|or|not|is|has|in|with|from|as|to)\\b"
+          "match": "\\b(and|or|not|is|has|in|with|from|as|to|exists)\\b"
         },
         {
           "name": "keyword.other.logi",
-          "match": "\\b(fail|otherwise fail)\\b"
+          "match": "\\b(fail|start)\\b"
         }
       ]
     },
-    "type-declarations": {
+    "declarations": {
       "patterns": [
-        {
-          "match": "\\b(type|failure|behavior|rule|screen|widget)\\s+([a-z_][a-z0-9_]*)",
-          "captures": {
-            "1": {
-              "name": "keyword.control.logi"
-            },
-            "2": {
-              "name": "entity.name.type.logi"
-            }
-          }
-        },
         {
           "match": "\\b(module)\\s+([a-z_][a-z0-9_]*)",
           "captures": {
@@ -76,6 +84,50 @@
               "name": "entity.name.namespace.logi"
             }
           }
+        },
+        {
+          "match": "\\b(type|failure|widget|screen|flow)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "entity.name.type.logi"
+            }
+          }
+        },
+        {
+          "match": "\\b(usecase|job|system_event)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "entity.name.function.logi"
+            }
+          }
+        },
+        {
+          "match": "\\b(state|prop)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "variable.other.readwrite.logi"
+            }
+          }
+        },
+        {
+          "match": "\\b(event|action)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "entity.name.function.logi"
+            }
+          }
         }
       ]
     },
@@ -83,7 +135,7 @@
       "patterns": [
         {
           "name": "support.type.primitive.logi",
-          "match": "\\b(text|number|decimal|boolean|date|datetime)\\b"
+          "match": "\\b(text|number|decimal|boolean|date|datetime|void)\\b"
         }
       ]
     },
@@ -97,9 +149,6 @@
             {
               "name": "constant.character.escape.logi",
               "match": "\\\\."
-            },
-            {
-              "include": "#interpolation"
             }
           ]
         }
@@ -117,11 +166,11 @@
       "patterns": [
         {
           "name": "keyword.operator.logi",
-          "match": "(:|=|\\?|\\[|\\]|\\||,)"
+          "match": "(->|:|=|\\?|\\[|\\]|\\||,)"
         }
       ]
     },
-    "interpolation": {
+    "references": {
       "patterns": [
         {
           "name": "meta.embedded.expression.logi",
@@ -130,9 +179,17 @@
           "patterns": [
             {
               "name": "variable.other.logi",
-              "match": "[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)?"
+              "match": "[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*"
             }
           ]
+        }
+      ]
+    },
+    "qualified-names": {
+      "patterns": [
+        {
+          "name": "variable.other.object.property.logi",
+          "match": "\\b[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)+\\b"
         }
       ]
     }

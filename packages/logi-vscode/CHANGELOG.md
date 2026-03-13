@@ -2,6 +2,13 @@
 
 All notable changes to the "Logi" extension will be documented in this file.
 
+## [0.1.1] - 2026-03-13
+
+### Changed
+- Renamed the visual companion language to use `.logid` as the primary file extension
+- Added extension icon and file icons for Logi and LogiD
+- Updated formatting and language wiring to use the new `logid` language id
+
 ## [0.1.0] - 2026-03-13
 
 ### Initial Release
@@ -13,7 +20,7 @@ All notable changes to the "Logi" extension will be documented in this file.
   - Comments, strings, and interpolation syntax
   - Type declarations and modifiers (?, [])
 
-- **Syntax Highlighting** for `.logidesign` files
+- **Syntax Highlighting** for `.logid` files
   - Tokens: color, font, space, radius, shadow, size
   - Styles with properties and child selectors
   - State blocks: hover, active, focus, disabled, selected, loading, error

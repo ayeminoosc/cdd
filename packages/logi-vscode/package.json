@@ -1,9 +1,10 @@
 {
   "name": "logi",
   "displayName": "Logi Language Support",
-  "description": "Syntax highlighting and formatting for Logi and LogiDesign languages",
-  "version": "0.1.0",
+  "description": "Syntax highlighting and formatting for Logi and LogiD languages",
+  "version": "0.1.1",
   "publisher": "logi",
+  "icon": "icons/logi-extension.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/logi-lang/logi-vscode"
@@ -17,7 +18,7 @@
   ],
   "keywords": [
     "logi",
-    "logidesign",
+    "logid",
     "intent language",
     "dsl"
   ],
@@ -35,13 +36,13 @@
         }
       },
       {
-        "id": "logidesign",
-        "aliases": ["LogiDesign", "logidesign"],
-        "extensions": [".logidesign"],
+        "id": "logid",
+        "aliases": ["LogiD", "logid"],
+        "extensions": [".logid"],
         "configuration": "./language-configuration.json",
         "icon": {
-          "light": "./icons/logidesign-light.png",
-          "dark": "./icons/logidesign-dark.png"
+          "light": "./icons/logid-light.png",
+          "dark": "./icons/logid-dark.png"
         }
       }
     ],
@@ -52,9 +53,9 @@
         "path": "./syntaxes/logi.tmLanguage.json"
       },
       {
-        "language": "logidesign",
-        "scopeName": "source.logidesign",
-        "path": "./syntaxes/logidesign.tmLanguage.json"
+        "language": "logid",
+        "scopeName": "source.logid",
+        "path": "./syntaxes/logid.tmLanguage.json"
       }
     ],
     "commands": [
@@ -87,6 +88,7 @@
     }
   },
   "scripts": {
+    "generate:icons": "node ./scripts/generate-icons.mjs",
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
