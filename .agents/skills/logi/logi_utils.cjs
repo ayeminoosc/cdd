@@ -76,8 +76,11 @@ function saveHashes(baseDir, data) {
 // ---------------------------------------------------------------------------
 
 const BLOCK_KEYWORDS = new Set([
-  'type', 'failure', 'usecase', 'widget', 'screen', 'flow', 'job', 'system_event'
+  'type', 'failure', 'usecase', 'widget', 'screen', 'flow', 'job'
 ]);
+
+// Keywords that are single-line declarations (no 'end' block)
+const SINGLE_LINE_KEYWORDS = new Set(['system_event']);
 
 // Keywords that open nested sub-blocks (increase depth inside a declaration)
 const NESTED_BLOCK_KEYWORDS = new Set([
@@ -117,6 +120,13 @@ function parseLogiDeclarations(content) {
       const enumMatch = trimmed.match(/^type\s+(\w+)\s*=\s*.+/);
       if (enumMatch) {
         declarations[`type.${enumMatch[1]}`] = line;
+        continue;
+      }
+
+      // Single-line declarations (no 'end' block)
+      const singleMatch = trimmed.match(/^(\w+)\s+(\w+)/);
+      if (singleMatch && SINGLE_LINE_KEYWORDS.has(singleMatch[1])) {
+        declarations[`${singleMatch[1]}.${singleMatch[2]}`] = line;
         continue;
       }
 
@@ -686,14 +696,33 @@ function main() {
     }
 
     case 'reverse-lookup': {
-      const outputFile = rest[0];
-      if (!outputFile) { console.error('reverse-lookup: missing outputFile argument'); process.exit(1); }
-      const source = reverseMapOutputFile(baseDir, outputFile);
+      const rawPath = rest[0];
+      if (!rawPath) { console.error('reverse-lookup: missing outputFile argument'); process.exit(1); }
+
+      // Resolve the path: try as-is (relative to baseDir), then relative to output dir.
+      // This means the user can pass either the full relative path OR just the filename/subpath
+      // relative to the output directory defined in project.logi.jsonc.
+      let resolvedPath = rawPath.replace(/^\.[\/\\]/, ''); // strip leading ./
+      let source = reverseMapOutputFile(baseDir, resolvedPath);
+
+      if (!source) {
+        // Try resolving relative to the configured output dir
+        try {
+          const cfg = loadProjectConfig(baseDir);
+          const outputDir = cfg.output || 'src/generated';
+          const pathViaOutput = path.join(outputDir, rawPath).replace(/\\/g, '/');
+          source = reverseMapOutputFile(baseDir, pathViaOutput);
+          if (source) resolvedPath = pathViaOutput;
+        } catch (_) { /* project.logi.jsonc may not exist — ignore */ }
+      }
+
       if (source) {
         console.log(source);
       } else {
-        console.error(`No Logi source found for output: ${outputFile}`);
-        process.exit(1);
+        // Not tracked — signal the agent to use onboard (generate new .logi) mode.
+        // Do NOT exit with code 1; the agent must be able to check this cleanly.
+        console.log('__UNTRACKED__');
+        console.log(`resolved: ${resolvedPath}`);
       }
       break;
     }

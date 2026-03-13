@@ -161,17 +161,60 @@ Display the human-readable portion of the output (everything before `__JSON__`).
 
 **Purpose**: Make `.logi` files reflect actual code — handles both drift (tracked file changed) and untracked code (new file with no `.logi` source).
 
+### Round-trip fidelity contract
+
+> **`/logi reverse` → `/logi build` ≈ identical code**
+
+This is the non-negotiable goal. The `.logi` file produced by `reverse` is not a high-level summary — it is a **complete, accurate specification** of the implementation. Every logical detail that drives code generation must be captured:
+
+| Code construct | Logi DSL construct required |
+|---|---|
+| Method/function signature | `usecase <name> for <exact typed params> returns <exact type>` |
+| Guard / if-null check | `check <exact condition>, otherwise fail with <failure> with <exact field and message>` |
+| Conditional branch | `when <exact condition> … end` / `otherwise … end` |
+| Operation step | `step <precise description naming exact service, method, args>` |
+| Return value | `return <exact value or expression>` |
+| ORM/persistence | `@entity`, `@table("…")`, `@id`, `@unique`, `@relation(…)` on each field |
+| HTTP endpoint | `@endpoint(method: "…", path: "…")` on the usecase |
+| Widget prop | `prop <name>: <exact type>` |
+| Widget event | `event <name>(<exact params>)` |
+| Rendered element | `show <element_type> <name> label "<text>"` |
+| Conditional render | `when <exact condition> … end` |
+| Screen state | `state <name>: <type> = <default>` — type and default must be exact |
+| Screen action | `action <name> -> call <usecase> with <exact args>` |
+| Event handler | `on <widget>.<event> -> set <state>` / `run <action>` / `go to <screen>` (ALL handlers, exact) |
+
+**What counts as insufficiently detailed** (avoid these):
+- `step save the user` → **wrong** — should be `step save {user} to {user_repository}, set {user.id} from the generated key, and return {user}`
+- `check email is valid` → **wrong** — should include the exact failure type and message value from the code
+- omitting `= false` from `state is_loading: boolean = false` → causes wrong code generation
+- omitting `on submit_login.failed -> set is_loading = false` → causes missing handler in output
+
 Two detection modes run in one pass:
 - **Drift mode**: output file is in `hashes.json` but its content hash changed → update existing `.logi` declaration
 - **Onboard mode**: output file is NOT in `hashes.json` → new code with no Logi source → generate new `.logi` block and register it
 
+### Path resolution for the output file argument
+
+The path you pass is resolved **relative to the `output` directory** declared in `project.logi.jsonc`.
+You can pass either:
+- A short filename/subpath (e.g. `AuthService.ts` or `auth/AuthService.ts`), which is resolved as `<output>/auth/AuthService.ts`
+- The full path from the project root (e.g. `src/generated/auth/AuthService.ts`), which is used as-is
+
+Both forms are tried automatically.
+
 ### With specific output file:
 ```
+/logi [module] reverse AuthService.ts
+# or equivalently:
 /logi [module] reverse src/generated/auth/AuthService.ts
 ```
-1. Run: `node .agents/skills/logi/logi_utils.cjs reverse-lookup [module] src/generated/auth/AuthService.ts`
-2. **If found in hashes** → drift mode: proceed to sync
-3. **If not found in hashes** → onboard mode: proceed to generate new declaration
+1. Run: `node .agents/skills/logi/logi_utils.cjs reverse-lookup [module] AuthService.ts`
+2. Check the first line of stdout:
+   - Anything **other than `__UNTRACKED__`** → it is the source `.logi` file path → **drift mode**
+   - `__UNTRACKED__` → file is not registered in hashes → **onboard mode**
+
+> Note: `reverse-lookup` always exits with code **0**. The `__UNTRACKED__` token in stdout (not stderr) is how you detect the onboard case. Never branch on exit code for this command.
 
 ### Without argument (scan everything):
 1. Run: `node .agents/skills/logi/logi_utils.cjs status [module]` → get `drifted` list
@@ -182,8 +225,13 @@ Two detection modes run in one pass:
 ### For each drifted file (tracked, code changed):
 1. Read current content of each output file in its `outputs` map
 2. Read current `.logi` source content
-3. Send to LLM:
+3. Read `logi.md` translation rules (already in build context)
+4. Send to LLM with this **exact prompt structure**:
 
+   > **Reverse engineering task — round-trip fidelity required**
+   >
+   > **Goal**: The `.logi` you produce must be precise enough that running `/logi build` on it would reproduce **functionally identical output code** to what is shown below. This is not a summary — it is a complete, accurate specification of the implementation.
+   >
    > **Current `.logi` source** (`<file>`):
    > ```logi
    > <content>
@@ -192,22 +240,90 @@ Two detection modes run in one pass:
    > ```<language>
    > <content>
    > ```
-   > Task: Produce an updated `.logi` file that accurately reflects what the implementation code actually does. Preserve Logi DSL structure and keywords. Fix declarations to match the implementation. Do not invent Logi syntax — use only valid Logi keywords.
+   > **Translation rules** (how `.logi` maps to this codebase):
+   > ```
+   > <translationRules>
+   > ```
+   >
+   > **Mapping rules — apply ALL of these systematically:**
+   >
+   > **Usecases / service methods / functions:**
+   > - Map each method/function to `usecase <name> for <typed params> returns <type>` — keep exact parameter names and types
+   > - Map each guard/validation to `check <exact condition>, otherwise fail with <failure> with <exact field and message values>`
+   > - Map each `if/else` branch to `when <exact condition> … end` / `otherwise … end`
+   > - Map each loop over a collection to `each <item> in <collection> … end`; loop-until to `repeat until <condition> … end`
+   > - Map each operation step to `step <precise natural language>` — name the exact operation, service, method, and arguments; do not omit specifics (wrong: `step save the user`; right: `step save {user} to {user_repository} and return the saved record`)
+   > - Map each return to `return <exact value>` or `return failure <failure> with <field values>`
+   > - Preserve all usecase annotations: `@endpoint(method, path)`, `@public`, `@requires_auth`, `@role("…")`, `@idempotent`, `@job_handler`
+   >
+   > **Types / entities / DTOs:**
+   > - Map each field with its exact name, type, optional marker (`?`), and default value
+   > - Preserve all persistence annotations: `@entity`, `@table("…")`, `@id`, `@unique`, `@index`, `@generated`, `@default("…")`, `@relation(kind, target)`
+   >
+   > **Widgets / UI components:**
+   > - Map every prop: `prop <name>: <type>` — exact names and types
+   > - Map every emitted event: `event <name>(<params>)` — exact signatures
+   > - Map every rendered element: `show <element_type> <name> label "<text>"`
+   > - Map every conditional render: `when <exact condition> … end`
+   > - Preserve UI annotations: `@test_id("…")`, `@render("…")`, `@variant("…")`, `@motion("…")`, `@platform("…")`
+   >
+   > **Screens / containers:**
+   > - Map every state field: `state <name>: <type> = <default>` — exact types and default values
+   > - Map every action: `action <name> -> call <usecase> with <exact args>`
+   > - Map every event binding exactly: `on <widget>.<event> -> set <state>` / `on <widget>.<event> -> run <action>` / `on <usecase>.succeeded -> go to <screen>` — wire exactly as the code does, including multiple handlers per event
+   > - Preserve screen annotations: `@route("…")`, `@requires_auth`, `@theme("…")`, `@layout("…")`, `@title("…")`
+   >
+   > **Before writing, verify mentally:**
+   > 1. Every function/method in the code is represented by a declaration
+   > 2. Every `check` preserves the exact condition and error details (field, message)
+   > 3. Every `step` is precise enough to reproduce the same logic
+   > 4. Every state field has its correct type and default
+   > 5. Every `on` handler is wired exactly as in the code
+   > 6. All annotations that affect generated output are present
+   >
+   > Return only the complete updated `.logi` file — no prose, no markdown fences, no explanation.
 
-4. Collect proposed updated `.logi` content
+5. Collect proposed updated `.logi` content
 
 ### For each untracked file (new code, no `.logi` source):
 1. Read the code file content
-2. Send to LLM:
+2. Read `logi.md` translation rules (already in build context)
+3. Send to LLM with this **exact prompt structure**:
 
-   > **New implementation file** (`<outputFile>`):
+   > **Reverse engineering task — round-trip fidelity required**
+   >
+   > **Goal**: Generate a Logi declaration that is precise enough that running `/logi build` on it would reproduce **functionally identical code** to what is shown below. This is a complete, accurate specification — not a summary.
+   >
+   > **Implementation file** (`<outputFile>`):
    > ```<language>
    > <content>
    > ```
-   > Task: Generate a new Logi declaration block that accurately represents this code. Use the correct Logi keyword (`type`, `usecase`, `screen`, `widget`, etc.). Use only valid Logi DSL syntax from the spec.
+   > **Translation rules** (how `.logi` maps to this codebase):
+   > ```
+   > <translationRules>
+   > ```
+   >
+   > **Mapping rules — apply ALL of these systematically:**
+   >
+   > - Choose the correct top-level keyword: `type`, `failure`, `usecase`, `widget`, `screen`
+   > - **Usecases**: capture exact param names/types, every `check` with exact condition and failure message, every `when`/`otherwise`, every `step` with precise operation detail, every `return`
+   > - **Types**: capture every field with exact name, type, optional marker, default, and persistence annotations
+   > - **Widgets**: capture every `prop`, `event`, `show`, and `when` block exactly
+   > - **Screens**: capture every `state` with type and default, every `action`, every `on` binding exactly, and all `show`/`when` blocks
+   > - Preserve all annotations that influence translation: `@endpoint`, `@requires_auth`, `@entity`, `@table`, `@id`, `@route`, `@test_id`, etc.
+   >
+   > **Before writing, verify mentally:**
+   > 1. Every function/method → declaration present
+   > 2. Every guard/validation → `check` with exact condition and error values
+   > 3. Every step → `step` precise enough to reproduce the operation
+   > 4. Every state field → typed with correct default
+   > 5. Every event handler → `on` binding exact
+   > 6. All translation-relevant annotations present
+   >
+   > Return only the Logi declaration block — no prose, no markdown fences, no explanation.
 
-3. Ask user: **which `.logi` contract file** should this declaration be appended to? (list existing `.logi` files as options, or allow specifying a new file path)
-4. Collect proposed new declaration
+4. Ask user: **which `.logi` contract file** should this declaration be appended to? (list existing `.logi` files as options, or allow specifying a new file path)
+5. Collect proposed new declaration
 
 ### After processing all files:
 1. Show **combined diff** — all drifted updates + all new declarations to be appended
