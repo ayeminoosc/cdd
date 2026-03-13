@@ -47,10 +47,13 @@
       "patterns": [
         {
           "name": "meta.annotation.logi",
-          "match": "@([a-z_][a-z0-9_]*)",
+          "match": "(@)([a-z_][a-z0-9_]*(?:\\([^)]*\\))?)",
           "captures": {
             "1": {
-              "name": "entity.name.tag.logi"
+              "name": "punctuation.definition.annotation.logi"
+            },
+            "2": {
+              "name": "storage.type.annotation.logi"
             }
           }
         }
@@ -69,6 +72,10 @@
         {
           "name": "keyword.other.logi",
           "match": "\\b(fail|start)\\b"
+        },
+        {
+          "name": "punctuation.separator.continuation.logi",
+          "match": "\\\\$"
         }
       ]
     },

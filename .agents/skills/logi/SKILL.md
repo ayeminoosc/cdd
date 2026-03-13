@@ -342,9 +342,9 @@ Both forms are tried automatically.
 3. Read `logi.md` translation rules (already in build context)
 4. Send to LLM with this **exact prompt structure**:
 
-   > **Reverse engineering task — round-trip fidelity required**
+   > **Reverse engineering task — maximum fidelity required**
    >
-   > **Goal**: The `.logi` you produce must be precise enough that running `/logi build` on it would reproduce **functionally identical output code** to what is shown below. This is not a summary — it is a complete, accurate specification of the implementation.
+   > **Goal**: The `.logi` you produce must be precise enough that running `/logi build` on it would reproduce **byte-for-byte functionally identical output code**. This is NOT a summary. Every line of logic in the implementation must be captured. When in doubt, write more detail, not less.
    >
    > **Source `.logi` file**: `<logiFileRelPath>` (under `<config.source>/<packagePath>/`)
    > **Package / module**: `<module_declaration>` (e.g. `module com.example.auth` — preserve this exactly)
@@ -362,20 +362,37 @@ Both forms are tried automatically.
    > <translationRules>
    > ```
    >
-   > **Mapping rules — apply ALL of these systematically:**
+   > **Mapping rules — apply ALL of these with maximum specificity:**
+   >
+   > **Classes with multiple methods → `component` block:**
+   > - A class with methods maps to `component <snake_name>` containing one `usecase` per method
+   > - Do NOT flatten class methods to top-level `usecase` blocks
+   > - Class-level annotations go on the line before `component`
+   >
+   > **`step` granularity — this is the most important rule:**
+   > - Every non-trivial line or logical operation in the implementation body must become its own `step`
+   > - A `step` must be specific enough that a developer could implement it in **exactly one way** — if it is ambiguous, it is too vague
+   > - Name the exact variable, field, method, library, service, and argument involved
+   > - **WRONG (too vague):** `step serialize attachments`
+   > - **WRONG (too vague):** `step process the data using object mapper`
+   > - **WRONG (too vague):** `step convert the value`
+   > - **RIGHT:** `step serialize {attachments} to a JSON string using {object_mapper}.writeValueAsString, return null if {attachments} is null`
+   > - **RIGHT:** `step deserialize {db_data} from JSON string to list of {attachment} using {object_mapper}.readValue with type reference list<attachment>, return null if {db_data} is null`
+   > - **RIGHT:** `step call {password_encoder}.encode with {request.password} and assign to {user.password_hash}`
+   > - Do not merge multiple operations into one step
+   > - Do not omit null-checks, default assignments, or type-conversion details
    >
    > **Usecases / service methods / functions:**
-   > - Map each method/function to `usecase <name> for <typed params> returns <type>` — keep exact parameter names and types
-   > - Map each guard/validation to `check <exact condition>, otherwise fail with <failure> with <exact field and message values>`
-   > - Map each `if/else` branch to `when <exact condition> … end` / `otherwise … end`
-   > - Map each loop over a collection to `each <item> in <collection> … end`; loop-until to `repeat until <condition> … end`
-   > - Map each operation step to `step <precise natural language>` — name the exact operation, service, method, and arguments; do not omit specifics (wrong: `step save the user`; right: `step save {user} to {user_repository} and return the saved record`)
+   > - Map each method/function to `usecase <name> for <typed params> returns <type>` — exact param names and types
+   > - Map each guard/null-check/validation to `check <exact condition>, otherwise fail with <failure> with <exact field and message values>`
+   > - Map each `if/else` branch to `when <exact condition> … end` / `otherwise … end` — use exact field/variable names in the condition
+   > - Map each loop to `each <item> in <collection> … end`; loop-until to `repeat until <condition> … end`
    > - Map each return to `return <exact value>` or `return failure <failure> with <field values>`
    > - Preserve all usecase annotations: `@endpoint(method, path)`, `@public`, `@requires_auth`, `@role("…")`, `@idempotent`, `@job_handler`
    >
    > **Types / entities / DTOs:**
-   > - Map each field with its exact name, type, optional marker (`?`), and default value
-   > - Preserve all persistence annotations: `@entity`, `@table("…")`, `@id`, `@unique`, `@index`, `@generated`, `@default("…")`, `@relation(kind, target)`
+   > - Map each field with exact name, type, optional marker (`?`), default value, and all field-level annotations
+   > - Preserve all persistence/serialization annotations: `@entity`, `@table("…")`, `@id`, `@unique`, `@index`, `@generated`, `@default("…")`, `@relation(kind, target)`, `@column("…")`, `@converter`
    >
    > **Widgets / UI components:**
    > - Map every prop: `prop <name>: <type>` — exact names and types
@@ -387,16 +404,18 @@ Both forms are tried automatically.
    > **Screens / containers:**
    > - Map every state field: `state <name>: <type> = <default>` — exact types and default values
    > - Map every action: `action <name> -> call <usecase> with <exact args>`
-   > - Map every event binding exactly: `on <widget>.<event> -> set <state>` / `on <widget>.<event> -> run <action>` / `on <usecase>.succeeded -> go to <screen>` — wire exactly as the code does, including multiple handlers per event
+   > - Map every event binding exactly — wire exactly as the code does, including multiple handlers per event
    > - Preserve screen annotations: `@route("…")`, `@requires_auth`, `@theme("…")`, `@layout("…")`, `@title("…")`
    >
-   > **Before writing, verify mentally:**
-   > 1. Every function/method in the code is represented by a declaration
-   > 2. Every `check` preserves the exact condition and error details (field, message)
-   > 3. Every `step` is precise enough to reproduce the same logic
-   > 4. Every state field has its correct type and default
-   > 5. Every `on` handler is wired exactly as in the code
-   > 6. All annotations that affect generated output are present
+   > **Before writing, verify mentally — reject if any answer is no:**
+   > 1. Every function/method is represented by a `usecase` or `component` + `usecase`
+   > 2. Every guard/null-check/validation is a `check` with exact condition and error details
+   > 3. Every non-trivial code line is a `step` with specific variable/method/service names
+   > 4. No step collapses two or more operations into one vague phrase
+   > 5. Every `when`/`otherwise` uses exact variable names from the code
+   > 6. Every `return` and `return failure` has its exact value
+   > 7. Every state field has its correct type and default
+   > 8. All annotations that affect generated output are present
    >
    > Return only the complete updated `.logi` file — no prose, no markdown fences, no explanation.
 
@@ -426,24 +445,36 @@ Both forms are tried automatically.
    > - If this is a new `.logi` file, the first line must be: `module <packagePath_with_dots>`
    > - For Java/Kotlin: the module name is the Java package declaration verbatim. For TypeScript: the module name is the directory path with `/` replaced by `.`.
    >
-   > **Mapping rules — apply ALL of these systematically:**
+   > **Mapping rules — apply ALL of these with maximum specificity:**
    >
-   > - Choose the correct top-level keyword: `type`, `failure`, `usecase`, `widget`, `screen`
-   > - **Usecases**: capture exact param names/types, every `check` with exact condition and failure message, every `when`/`otherwise`, every `step` with precise operation detail, every `return`
-   > - **Types**: capture every field with exact name, type, optional marker, default, and persistence annotations
-   > - **Widgets**: capture every `prop`, `event`, `show`, and `when` block exactly
-   > - **Screens**: capture every `state` with type and default, every `action`, every `on` binding exactly, and all `show`/`when` blocks
-   > - Preserve all annotations that influence translation: `@endpoint`, `@requires_auth`, `@entity`, `@table`, `@id`, `@route`, `@test_id`, etc.
+   > - **Choose the correct top-level keyword**: `type`, `failure`, `usecase`, `component` (class with methods), `widget`, `screen`
+   > - A **class with multiple methods** → `component <snake_name>` block with one `usecase` per method. Do NOT write flat top-level `usecase` blocks for class methods.
    >
-   > **Before writing, verify mentally:**
-   > 1. Every function/method → declaration present
-   > 2. Every guard/validation → `check` with exact condition and error values
-   > 3. Every step → `step` precise enough to reproduce the operation
-   > 4. Every state field → typed with correct default
-   > 5. Every event handler → `on` binding exact
+   > **`step` granularity — this is the most important rule:**
+   > - Every non-trivial line or logical operation in the implementation body must become its own `step`
+   > - A `step` must be specific enough that a developer could implement it in **exactly one way**
+   > - Name the exact variable, field, method, library, service, and argument involved
+   > - **WRONG (too vague):** `step serialize attachments`
+   > - **WRONG (too vague):** `step convert the value`
+   > - **RIGHT:** `step serialize {attachments} to a JSON string using {object_mapper}.writeValueAsString, return null if {attachments} is null`
+   > - **RIGHT:** `step deserialize {db_data} from JSON string to list of {attachment} using {object_mapper}.readValue with type reference list<attachment>, return null if {db_data} is null`
+   > - Do not merge multiple operations into one step. Do not omit null-checks, defaults, or type-conversion details.
+   >
+   > - **`component` / usecases**: exact param names and types; every null-check/guard as `check`; every `if`/`else` as `when`/`otherwise` with exact variable names; every loop as `each`/`repeat`; every code line as a specific `step`; every `return` exact
+   > - **Types / entities**: every field with exact name, type, optional marker, default, and all field-level and class-level annotations (`@entity`, `@table`, `@id`, `@column`, `@converter`, etc.)
+   > - **Widgets**: every `prop`, `event`, `show`, and `when` block exactly
+   > - **Screens**: every `state` with type and default, every `action`, every `on` binding exactly
+   > - Preserve all annotations: `@endpoint`, `@requires_auth`, `@entity`, `@table`, `@id`, `@converter`, `@route`, `@test_id`, etc.
+   >
+   > **Before writing, verify mentally — reject if any answer is no:**
+   > 1. Every function/method → `usecase` inside `component`, or standalone `usecase`
+   > 2. Every guard/null-check → `check` with exact condition and error values
+   > 3. Every non-trivial code line → `step` with specific variable/method/service names
+   > 4. No step collapses two or more operations
+   > 5. Every `return` and `return failure` is exact
    > 6. All translation-relevant annotations present
    >
-   > Return only the Logi declaration block — no prose, no markdown fences, no explanation.
+   > Return only the Logi declaration — no prose, no markdown fences, no explanation.
 
 3. **Automatically derive the target `.logi` file path** — do NOT ask the user where to put it unless ambiguous:
    - Compute `packagePath` = path of the output file **relative to `config.output`**, then drop the filename.
@@ -591,10 +622,18 @@ usecase <name> for <inputs> returns <return_type>
     ...
   end
   step <natural language description>
+  step <long description that \
+    continues on the next line>
   return <value>
   return failure <failure>
   return failure <failure> with <detail>
 end
+```
+**Line continuation**: A `step` (or `check`) that is too long to fit on one line can be broken with a trailing `\`. The continuation line is indented one extra level. The `\` and the following line are treated as a single logical line.
+```
+  step deserialize {db_data} from JSON string to list of {attachment} \
+    using {object_mapper}.readValue with type reference list<attachment>, \
+    return null if {db_data} is null
 ```
 Common annotations: `@endpoint(method: "post", path: "/...")`, `@public`, `@requires_auth`, `@role("name")`, `@idempotent`, `@job_handler`, `@description("...")`
 

@@ -484,6 +484,36 @@ end
     assertIncludes(d['usecase.standalone'], 'step a');
     assertIncludes(d['component.grouped'], 'step b');
   });
+
+  test('usecase with \\ continuation lines is parsed correctly', () => {
+    const src = `usecase convert for db_data: text? returns attachment[]?
+  step deserialize {db_data} from JSON to list of attachment \\
+    using {object_mapper}.readValue with type reference list<attachment>, \\
+    return null if {db_data} is null
+  return the deserialized list
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('usecase.convert' in d, 'should find usecase');
+    assertIncludes(d['usecase.convert'], 'step deserialize');
+    assertIncludes(d['usecase.convert'], 'object_mapper');
+    assertIncludes(d['usecase.convert'], 'return the deserialized list');
+  });
+
+  test('component with \\ continuation in usecase step', () => {
+    const src = `component attachment_converter
+  usecase to_db for attachments: attachment[]? returns text?
+    step serialize {attachments} to JSON string using \\
+      {object_mapper}.writeValueAsString, return null if {attachments} is null
+    return the serialized string
+  end
+end
+`;
+    const d = parseLogiDeclarations(src);
+    assert('component.attachment_converter' in d);
+    assertIncludes(d['component.attachment_converter'], 'object_mapper');
+    assertIncludes(d['component.attachment_converter'], 'return the serialized string');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -569,6 +569,12 @@ type       → TypeScript interface (readonly fields, no class)
 failure    → TypeScript class extending Error with typed fields
 component  → TypeScript class with methods (one method per usecase inside the component)
 usecase    → async function exported from a service module; validate inputs first
+#
+# Line continuation: a step that is too long can be broken with a trailing \
+# The continuation line is indented one extra level and is part of the same step.
+# Example:
+#   step deserialize {db_data} from JSON to list of {attachment} \
+#     using {object_mapper}.readValue with type reference list<attachment>
 widget     → React functional component accepting Props interface; use Tailwind for styling
 screen     → React page component registered in the router
 flow       → React Router v6 routes object

@@ -123,6 +123,7 @@ function formatLogiDocument(document: vscode.TextDocument): string {
   const formatted: string[] = [];
   let indentLevel = 0;
   let previousLineWasBlank = false;
+  let isContinuation = false;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -132,31 +133,36 @@ function formatLogiDocument(document: vscode.TextDocument): string {
         formatted.push('');
       }
       previousLineWasBlank = true;
+      isContinuation = false;
       continue;
     }
 
     previousLineWasBlank = false;
 
-    if (blankLinesBetweenBlocks && shouldInsertLogiBlankLine(formatted, line, indentLevel)) {
+    if (!isContinuation && blankLinesBetweenBlocks && shouldInsertLogiBlankLine(formatted, line, indentLevel)) {
       formatted.push('');
     }
 
-    if (line === 'end') {
+    if (!isContinuation && line === 'end') {
       indentLevel = Math.max(0, indentLevel - 1);
       formatted.push(indent(line, indentLevel, indentSize));
+      isContinuation = false;
       continue;
     }
 
-    if (line === 'otherwise') {
+    if (!isContinuation && line === 'otherwise') {
       indentLevel = Math.max(0, indentLevel - 1);
       formatted.push(indent(line, indentLevel, indentSize));
       indentLevel += 1;
+      isContinuation = false;
       continue;
     }
 
-    formatted.push(indent(line, indentLevel, indentSize));
+    const extraIndent = isContinuation ? 1 : 0;
+    formatted.push(indent(line, indentLevel + extraIndent, indentSize));
 
-    if (LOGI_BLOCK_START_PATTERN.test(line)) {
+    isContinuation = line.endsWith('\\');
+    if (!isContinuation && LOGI_BLOCK_START_PATTERN.test(line)) {
       indentLevel += 1;
     }
   }
