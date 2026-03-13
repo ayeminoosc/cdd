@@ -319,10 +319,12 @@ Both forms are tried automatically.
 ```
 /logi [module] reverse AuthService.ts
 # or equivalently:
-/logi [module] reverse src/generated/auth/AuthService.ts
+/logi [module] reverse src/main/kotlin/com/example/auth/AuthService.kt
 ```
-1. Run: `node .agents/skills/logi/logi_utils.cjs reverse-lookup [module] AuthService.ts`
-2. Check the first line of stdout:
+1. Run: `node .agents/skills/logi/logi_utils.cjs reverse-lookup [module] <outputFile>` → get first line of stdout.
+2. **Read `project.logi.jsonc`** in the module directory to get `config.output` (e.g. `src/main/kotlin`). Use it to resolve the full path: `<moduleDir>/<config.output>/<outputFile>`. **Never guess or search for the file; never assume `generated/`.**
+3. Read the output file from that resolved path.
+4. Check the reverse-lookup result:
    - Anything **other than `__UNTRACKED__`** → it is the source `.logi` file path → **drift mode**
    - `__UNTRACKED__` → file is not registered in hashes → **onboard mode**
 
