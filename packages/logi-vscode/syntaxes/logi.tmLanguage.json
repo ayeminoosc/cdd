@@ -1,0 +1,140 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Logi",
+  "scopeName": "source.logi",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#type-declarations"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#built-in-types"
+    },
+    {
+      "include": "#interpolation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.logi",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.logi",
+          "match": "\\b(module|type|extends|failure|behavior|rule|step|check|when|otherwise|each|repeat|until|return|end|screen|widget|bind|show|for)\\b"
+        },
+        {
+          "name": "keyword.operator.logi",
+          "match": "\\b(and|or|not|is|has|in|with|from|as|to)\\b"
+        },
+        {
+          "name": "keyword.other.logi",
+          "match": "\\b(fail|otherwise fail)\\b"
+        }
+      ]
+    },
+    "type-declarations": {
+      "patterns": [
+        {
+          "match": "\\b(type|failure|behavior|rule|screen|widget)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "entity.name.type.logi"
+            }
+          }
+        },
+        {
+          "match": "\\b(module)\\s+([a-z_][a-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.logi"
+            },
+            "2": {
+              "name": "entity.name.namespace.logi"
+            }
+          }
+        }
+      ]
+    },
+    "built-in-types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.logi",
+          "match": "\\b(text|number|decimal|boolean|date|datetime)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.logi",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.logi",
+              "match": "\\\\."
+            },
+            {
+              "include": "#interpolation"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.logi",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.logi",
+          "match": "(:|=|\\?|\\[|\\]|\\||,)"
+        }
+      ]
+    },
+    "interpolation": {
+      "patterns": [
+        {
+          "name": "meta.embedded.expression.logi",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "name": "variable.other.logi",
+              "match": "[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)?"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

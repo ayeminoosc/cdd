@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=520">
+  <title>Logi Demo — Login Screen</title>
+  <style>
+    :root {
+      /* LogiDesign v2 tokens: dark theme */
+      --page-background: #020617;
+      --panel-surface: #0F172A;
+      --panel-surface-elevated: #111C34;
+      --text-primary: #E5EEF8;
+      --text-muted: #94A3B8;
+      --text-error: #FB7185;
+      --field-background: #111C34;
+      --field-border: #24324D;
+      --field-border-error: #FB7185;
+      --action-primary-background: #6EE7F9;
+      --action-primary-background-hover: #22D3EE;
+      --action-primary-text: #020617;
+      --focus-ring: #A78BFA;
+      --accent-glow: rgba(110, 231, 249, 0.28);
+      --form-width: 520px;
+      --badge-size: 56px;
+      --field-height: 52px;
+      --button-height: 52px;
+      --radius-lg: 26px;
+      --radius-md: 14px;
+      --radius-full: 9999px;
+      --shadow-lg: 0 8px 32px rgba(110, 231, 249, 0.28);
+      --shadow-md: 0 4px 16px rgba(110, 231, 249, 0.14);
+      --font-display: 'Sora', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-xl: 32px;
+      --font-lg: 20px;
+      --font-md: 16px;
+      --font-sm: 14px;
+      --motion-normal: 220ms;
+      --motion-smooth: ease-out;
+    }
+    body {
+      background: var(--page-background);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: 16px;
+      padding: 32px;
+      background: var(--panel-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--accent-glow);
+      max-width: var(--form-width);
+      width: 100%;
+      transition: box-shadow var(--motion-normal) var(--motion-smooth);
+    }
+    .brand-badge {
+      width: var(--badge-size);
+      height: var(--badge-size);
+      background: var(--action-primary-background);
+      color: var(--action-primary-text);
+      border-radius: var(--radius-full);
+      font-size: var(--font-lg);
+      font-weight: bold;
+      font-family: var(--font-display);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .title {
+      color: var(--text-primary);
+      font-size: var(--font-xl);
+      font-weight: bold;
+      font-family: var(--font-display);
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: var(--font-md);
+      font-weight: normal;
+      margin-bottom: 16px;
+    }
+    .email-field, .password-field {
+      background: var(--field-background);
+      border: 1px solid var(--field-border);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      height: var(--field-height);
+      color: var(--text-primary);
+      font-size: var(--font-md);
+      margin-bottom: 4px;
+    }
+    .email-error-text, .password-error-text {
+      color: var(--text-error);
+      font-size: var(--font-sm);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .submit-spinner {
+      color: var(--action-primary-text);
+      margin-bottom: 8px;
+    }
+    .submit-button {
+      background: var(--action-primary-background);
+      color: var(--action-primary-text);
+      padding: 10px 16px;
+      height: var(--button-height);
+      border-radius: var(--radius-md);
+      font-size: var(--font-md);
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      border: none;
+      cursor: pointer;
+      transition: background var(--motion-normal) var(--motion-smooth);
+    }
+    .submit-button:hover {
+      background: var(--action-primary-background-hover);
+      box-shadow: var(--shadow-lg);
+    }
+    .helper-note {
+      color: var(--text-muted);
+      font-size: var(--font-sm);
+      font-weight: normal;
+      margin-top: 8px;
+    }
+    @media (max-width: 640px) {
+      .login-form {
+        padding: 24px;
+        border-radius: var(--radius-md);
+      }
+    }
+  </style>
+</head>
+<body>
+  <form class="login-form" id="loginForm" autocomplete="off">
+    <div class="brand-badge">LX</div>
+    <div class="title">Welcome back</div>
+    <div class="subtitle">Sign in to continue to your workspace</div>
+    <label for="email" style="margin-bottom:2px;">Email address</label>
+    <input type="email" id="email" name="email" class="email-field" placeholder="Email address" required>
+    <div id="emailError" class="email-error-text" style="display:none;"></div>
+    <label for="password" style="margin-bottom:2px;">Password</label>
+    <input type="password" id="password" name="password" class="password-field" placeholder="Password" required>
+    <div id="passwordError" class="password-error-text" style="display:none;"></div>
+    <div id="spinner" class="submit-spinner" style="display:none;">Loading...</div>
+    <button type="submit" class="submit-button">Continue</button>
+    <div class="helper-note">Use any password. The demo only validates the form.</div>
+  </form>
+  <script>
+    // Logi v2: validation logic
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const spinner = document.getElementById('spinner');
+
+    function validateEmail(email) {
+      if (!email) return 'Enter your email address';
+      const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      if (!re.test(email)) return 'Enter a valid email address';
+      return '';
+    }
+    function validatePassword(password) {
+      if (!password) return 'Enter your password';
+      return '';
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      emailError.style.display = 'none';
+      passwordError.style.display = 'none';
+      spinner.style.display = 'block';
+      let hasError = false;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const emailMsg = validateEmail(email);
+      const passwordMsg = validatePassword(password);
+      if (emailMsg) {
+        emailError.textContent = emailMsg;
+        emailError.style.display = 'block';
+        hasError = true;
+      }
+      if (passwordMsg) {
+        passwordError.textContent = passwordMsg;
+        passwordError.style.display = 'block';
+        hasError = true;
+      }
+      setTimeout(() => {
+        spinner.style.display = 'none';
+        if (!hasError) {
+          alert('calling backend');
+        }
+      }, 600);
+    });
+
+    emailInput.addEventListener('input', function() {
+      emailError.style.display = 'none';
+    });
+    passwordInput.addEventListener('input', function() {
+      passwordError.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

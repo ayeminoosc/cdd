@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logi v2 Auth Demo</title>
+  <style>
+    /* LogiDesign v2 Tokens */
+    :root {
+      --page-background: #020617;
+      --panel-surface: #0F172A;
+      --panel-surface-elevated: #111C34;
+      --text-primary: #E5EEF8;
+      --text-muted: #94A3B8;
+      --text-error: #FB7185;
+      --field-background: #111C34;
+      --field-border: #24324D;
+      --field-border-error: #FB7185;
+      --action-primary-background: #6EE7F9;
+      --action-primary-background-hover: #22D3EE;
+      --action-primary-text: #020617;
+      --focus-ring: #A78BFA;
+      --accent-glow: rgba(110, 231, 249, 0.28);
+      --form-width: 520px;
+      --badge-size: 56px;
+      --field-height: 52px;
+      --button-height: 52px;
+      --radius-lg: 26px;
+      --radius-md: 14px;
+      --radius-full: 9999px;
+      --shadow-lg: 0 8px 32px rgba(110, 231, 249, 0.28);
+      --shadow-md: 0 4px 16px rgba(110, 231, 249, 0.14);
+      --font-display: 'Sora', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-xl: 32px;
+      --font-lg: 20px;
+      --font-md: 16px;
+      --font-sm: 14px;
+      --space-xs: 4px;
+      --space-sm: 10px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --motion-normal: 220ms;
+      --motion-quick: 120ms;
+    }
+    body {
+      background: var(--page-background);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .centered_form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--page-background);
+    }
+    .login_form {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: var(--space-md);
+      padding: var(--space-xl);
+      background: var(--panel-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--accent-glow);
+      max-width: var(--form-width);
+      width: 100%;
+      transition: box-shadow var(--motion-normal) ease-out;
+      position: relative;
+    }
+    .brand_badge {
+      width: var(--badge-size);
+      height: var(--badge-size);
+      background: var(--action-primary-background);
+      color: var(--action-primary-text);
+      border-radius: var(--radius-full);
+      font-size: var(--font-lg);
+      font-weight: bold;
+      font-family: var(--font-display);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-md);
+    }
+    .title {
+      color: var(--text-primary);
+      font-size: var(--font-xl);
+      font-weight: bold;
+      font-family: var(--font-display);
+      margin-bottom: var(--space-sm);
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: var(--font-md);
+      font-weight: 400;
+      margin-bottom: var(--space-lg);
+    }
+    .email_field, .password_field {
+      background: var(--field-background);
+      border: 1px solid var(--field-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-sm) var(--space-md);
+      height: var(--field-height);
+      color: var(--text-primary);
+      font-size: var(--font-md);
+      margin-bottom: var(--space-xs);
+      outline: none;
+      transition: border-color var(--motion-quick) ease-out;
+    }
+    .email_field:focus, .password_field:focus {
+      border-color: var(--focus-ring);
+    }
+    .email_error_text, .password_error_text {
+      color: var(--text-error);
+      font-size: var(--font-sm);
+      font-weight: 500;
+      margin-bottom: var(--space-xs);
+    }
+    .submit_spinner {
+      color: var(--action-primary-text);
+      margin-bottom: var(--space-md);
+      text-align: center;
+    }
+    .submit_button {
+      background: var(--action-primary-background);
+      color: var(--action-primary-text);
+      padding: var(--space-sm) var(--space-md);
+      height: var(--button-height);
+      border-radius: var(--radius-md);
+      font-size: var(--font-md);
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      border: none;
+      cursor: pointer;
+      transition: background var(--motion-quick) ease-out, box-shadow var(--motion-normal) ease-out;
+      margin-bottom: var(--space-xs);
+    }
+    .submit_button:hover {
+      background: var(--action-primary-background-hover);
+      box-shadow: var(--shadow-lg);
+    }
+    .helper_note {
+      color: var(--text-muted);
+      font-size: var(--font-sm);
+      font-weight: 400;
+      margin-top: var(--space-xs);
+    }
+    @media (max-width: 640px) {
+      .login_form {
+        padding: var(--space-lg);
+        border-radius: var(--radius-md);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="centered_form">
+    <form class="login_form" id="login_form" autocomplete="off">
+      <div class="brand_badge">LX</div>
+      <div class="title">Welcome back</div>
+      <div class="subtitle">Sign in to continue to your workspace</div>
+      <input type="email" class="email_field" id="email_field" name="email" placeholder="Email address" autocomplete="username" />
+      <div class="email_error_text" id="email_error_text" style="display:none;"></div>
+      <input type="password" class="password_field" id="password_field" name="password" placeholder="Password" autocomplete="current-password" />
+      <div class="password_error_text" id="password_error_text" style="display:none;"></div>
+      <div class="submit_spinner" id="submit_spinner" style="display:none;">Loading...</div>
+      <button type="submit" class="submit_button" id="submit_button">Continue</button>
+      <div class="helper_note">Use any password. The demo only validates the form.</div>
+    </form>
+  </div>
+  <script>
+    // State
+    let email = '';
+    let password = '';
+    let validation_field = null;
+    let validation_message = null;
+    let is_loading = false;
+
+    // Elements
+    const emailField = document.getElementById('email_field');
+    const passwordField = document.getElementById('password_field');
+    const emailErrorText = document.getElementById('email_error_text');
+    const passwordErrorText = document.getElementById('password_error_text');
+    const submitSpinner = document.getElementById('submit_spinner');
+    const submitButton = document.getElementById('submit_button');
+    const loginForm = document.getElementById('login_form');
+
+    // Event handlers
+    emailField.addEventListener('input', (e) => {
+      email = e.target.value;
+      validation_field = null;
+      validation_message = null;
+      emailErrorText.style.display = 'none';
+      passwordErrorText.style.display = 'none';
+    });
+    passwordField.addEventListener('input', (e) => {
+      password = e.target.value;
+      validation_field = null;
+      validation_message = null;
+      emailErrorText.style.display = 'none';
+      passwordErrorText.style.display = 'none';
+    });
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      validation_field = null;
+      validation_message = null;
+      emailErrorText.style.display = 'none';
+      passwordErrorText.style.display = 'none';
+      // Action: submit_login
+      is_loading = true;
+      submitSpinner.style.display = 'block';
+      submitButton.disabled = true;
+      // Simulate backend call
+      setTimeout(() => {
+        is_loading = false;
+        submitSpinner.style.display = 'none';
+        submitButton.disabled = false;
+        // Validation logic
+        if (!email) {
+          validation_field = 'email';
+          validation_message = 'Enter your email address';
+        } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+          validation_field = 'email';
+          validation_message = 'Enter a valid email address';
+        } else if (!password) {
+          validation_field = 'password';
+          validation_message = 'Enter your password';
+        }
+        if (validation_field === 'email') {
+          emailErrorText.textContent = validation_message;
+          emailErrorText.style.display = 'block';
+        } else if (validation_field === 'password') {
+          passwordErrorText.textContent = validation_message;
+          passwordErrorText.style.display = 'block';
+        } else {
+          alert('calling backend');
+          // Success: reset form
+          emailField.value = '';
+          passwordField.value = '';
+          email = '';
+          password = '';
+        }
+      }, 800);
+    });
+  </script>
+</body>
+</html>

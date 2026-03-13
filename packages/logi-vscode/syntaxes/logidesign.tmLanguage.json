@@ -1,0 +1,124 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "LogiDesign",
+  "scopeName": "source.logidesign",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#properties"
+    },
+    {
+      "include": "#colors"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#token-references"
+    },
+    {
+      "include": "#child-selectors"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.logidesign",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.logidesign",
+          "match": "\\b(tokens|style|theme|end)\\b"
+        },
+        {
+          "name": "keyword.other.category.logidesign",
+          "match": "\\b(color|font|space|radius|shadow|size)\\b"
+        },
+        {
+          "name": "keyword.other.state.logidesign",
+          "match": "\\b(hover|active|focus|disabled|selected|loading|error)\\b"
+        },
+        {
+          "name": "keyword.other.responsive.logidesign",
+          "match": "\\b(on)\\s+(mobile|tablet|desktop)\\b"
+        }
+      ]
+    },
+    "properties": {
+      "patterns": [
+        {
+          "match": "^\\s*([a-z_][a-z0-9_]*):",
+          "captures": {
+            "1": {
+              "name": "entity.name.tag.logidesign"
+            }
+          }
+        }
+      ]
+    },
+    "child-selectors": {
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.class.css",
+          "match": "\\.[a-z_][a-z0-9_]*"
+        }
+      ]
+    },
+    "colors": {
+      "patterns": [
+        {
+          "name": "constant.other.color.rgb-value.hex.css",
+          "match": "#[0-9a-fA-F]{3,8}\\b"
+        },
+        {
+          "name": "support.function.misc.css",
+          "match": "rgba?\\([^)]+\\)"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.logidesign",
+          "match": "\\b\\d+(\\.\\d+)?%?\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.logidesign",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.logidesign",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "token-references": {
+      "patterns": [
+        {
+          "name": "variable.other.constant.logidesign",
+          "match": "\\b[a-z_][a-z0-9_]*(?=\\s*(,|$|\\}))"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,192 @@
+tokens
+  color
+    page_background:        #020617
+    panel_surface:          #0F172A
+    panel_surface_elevated: #111C34
+    text_primary:           #E5EEF8
+    text_muted:             #94A3B8
+    text_error:             #FB7185
+    field_background:       #111C34
+    field_border:           #24324D
+    field_border_error:     #FB7185
+    action_primary_background: #6EE7F9
+    action_primary_background_hover: #22D3EE
+    action_primary_text:    #020617
+    focus_ring:             #A78BFA
+    accent_glow:            rgba(110, 231, 249, 0.28)
+  end
+
+  font
+    body:    "Inter"
+    display: "Sora"
+    sm:      14
+    md:      16
+    lg:      20
+    xl:      32
+  end
+
+  space
+    xs: 4
+    sm: 10
+    md: 16
+    lg: 24
+    xl: 32
+    2xl: 48
+  end
+
+  radius
+    sm: 8
+    md: 14
+    lg: 26
+    full: 9999
+  end
+
+  shadow
+    sm: subtle drop shadow
+    md: medium floating shadow
+    lg: luminous floating shadow
+  end
+
+  size
+    form_width: 520
+    badge: 56
+    field_height: 52
+    button_height: 52
+  end
+
+  motion
+    quick: 120ms
+    normal: 220ms
+    smooth: ease-out
+  end
+end
+
+motion standard
+  enter: soft fade and rise
+  exit: soft fade out
+  emphasis: quick scale down on press
+  duration: normal
+  easing: smooth
+end
+
+style login_form
+  layout: flex
+  direction: column
+  justify: start
+  align: stretch
+  gap: md
+  padding: xl
+  background: panel_surface
+  radius: lg
+  shadow: lg
+  border: 1 field_border
+  max_width: form_width
+  motion: standard
+
+  .brand_badge
+    width: badge
+    height: badge
+    background: action_primary_background
+    color: action_primary_text
+    radius: full
+    font: lg, bold
+    font_family: display
+  end
+
+  .title
+    color: text_primary
+    font: xl, bold
+    font_family: display
+  end
+
+  .subtitle
+    color: text_muted
+    font: md, regular
+  end
+
+  .email_field
+    background: field_background
+    border: 1 field_border
+    radius: md
+    padding: sm md
+    height: field_height
+    color: text_primary
+  end
+
+  .password_field
+    background: field_background
+    border: 1 field_border
+    radius: md
+    padding: sm md
+    height: field_height
+    color: text_primary
+  end
+
+  .email_error_text
+    color: text_error
+    font: sm, medium
+  end
+
+  .password_error_text
+    color: text_error
+    font: sm, medium
+  end
+
+  .submit_spinner
+    color: action_primary_text
+  end
+
+  .submit_button
+    background: action_primary_background
+    color: action_primary_text
+    padding: sm md
+    height: button_height
+    radius: md
+    font: md, semibold
+    shadow: md
+    motion: standard
+  end
+
+  .helper_note
+    color: text_muted
+    font: sm, regular
+  end
+
+  focus
+    border: 1 focus_ring
+  end
+
+  hover
+    shadow: lg
+  end
+
+  on mobile
+    padding: lg
+    radius: md
+  end
+end
+
+variant login_form immersive
+  background: panel_surface
+  border: 1 accent_glow
+  shadow: lg
+end
+
+theme dark
+  color
+    page_background:        #020617
+    panel_surface:          #0F172A
+    panel_surface_elevated: #111C34
+    text_primary:           #E5EEF8
+    text_muted:             #94A3B8
+    text_error:             #FB7185
+    field_background:       #111C34
+    field_border:           #24324D
+    field_border_error:     #FB7185
+    action_primary_background: #6EE7F9
+    action_primary_background_hover: #22D3EE
+    action_primary_text:    #020617
+    focus_ring:             #A78BFA
+    accent_glow:            rgba(110, 231, 249, 0.28)
+  end
+end

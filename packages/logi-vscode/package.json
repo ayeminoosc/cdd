@@ -1,0 +1,105 @@
+{
+  "name": "logi",
+  "displayName": "Logi Language Support",
+  "description": "Syntax highlighting and formatting for Logi and LogiDesign languages",
+  "version": "0.1.0",
+  "publisher": "logi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/logi-lang/logi-vscode"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
+  "keywords": [
+    "logi",
+    "logidesign",
+    "intent language",
+    "dsl"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "logi",
+        "aliases": ["Logi", "logi"],
+        "extensions": [".logi"],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/logi-light.png",
+          "dark": "./icons/logi-dark.png"
+        }
+      },
+      {
+        "id": "logidesign",
+        "aliases": ["LogiDesign", "logidesign"],
+        "extensions": [".logidesign"],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/logidesign-light.png",
+          "dark": "./icons/logidesign-dark.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "logi",
+        "scopeName": "source.logi",
+        "path": "./syntaxes/logi.tmLanguage.json"
+      },
+      {
+        "language": "logidesign",
+        "scopeName": "source.logidesign",
+        "path": "./syntaxes/logidesign.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "logi.format",
+        "title": "Format Document",
+        "category": "Logi"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Logi",
+      "properties": {
+        "logi.formatting.indentSize": {
+          "type": "number",
+          "default": 2,
+          "description": "Number of spaces for indentation"
+        },
+        "logi.formatting.alignColons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Align colons in token definitions"
+        },
+        "logi.formatting.blankLinesBetweenBlocks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add blank lines between top-level blocks"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/vsce": "^2.19.0",
+    "eslint": "^8.45.0",
+    "typescript": "^5.1.6"
+  }
+}
